@@ -60,4 +60,12 @@ public final class IncomeAllocationDraft {
     public int hashCode() {
         return Objects.hash(id, amount, jurisdictionCode, allocatedFor);
     }
+
+    @Override
+    public String toString() {
+        return "IncomeAllocationDraft{id='" + id
+                + "', amount=" + amount.toPlainString()
+                + ", jurisdictionCode='" + jurisdictionCode
+                + "', allocatedFor=" + allocatedFor + "}";
+    }
 }

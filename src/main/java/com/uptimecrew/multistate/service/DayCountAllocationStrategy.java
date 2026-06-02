@@ -6,7 +6,7 @@ import com.uptimecrew.multistate.model.WorkDay;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
-import java.time.Year;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -20,7 +20,7 @@ public final class DayCountAllocationStrategy implements AllocationStrategy {
     public List<IncomeAllocation> allocate(String workerId,
                                            BigDecimal totalIncome,
                                            List<WorkDay> workDays,
-                                           Year allocatedFor) {
+                                           LocalDate allocatedFor) {
         Objects.requireNonNull(workerId, "workerId");
         Objects.requireNonNull(totalIncome, "totalIncome");
         Objects.requireNonNull(workDays, "workDays");

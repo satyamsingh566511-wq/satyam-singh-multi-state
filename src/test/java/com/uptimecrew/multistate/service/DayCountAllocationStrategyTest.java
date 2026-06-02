@@ -2,7 +2,6 @@ package com.uptimecrew.multistate.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.Year;
 import java.util.List;
 
 import com.uptimecrew.multistate.model.IncomeAllocation;
@@ -19,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DayCountAllocationStrategyTest {
 
     private static final String WORKER_ID = "wkr_001";
-    private static final Year YEAR = Year.of(2026);
+    private static final LocalDate ALLOCATED_FOR = LocalDate.of(2026, 1, 1);
     private static final BigDecimal TOTAL_INCOME = new BigDecimal("12500.00");
 
     @Test
@@ -33,7 +32,7 @@ class DayCountAllocationStrategyTest {
                 new WorkDay("day_004", WORKER_ID, "NY", LocalDate.of(2026, 3, 4))
         );
 
-        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, YEAR);
+        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
         assertNotNull(result);
         assertEquals(2, result.size());
@@ -44,13 +43,13 @@ class DayCountAllocationStrategyTest {
         assertAll(
                 () -> assertEquals(WORKER_ID, california.workerId()),
                 () -> assertEquals("CA", california.jurisdictionCode()),
-                () -> assertEquals(YEAR, california.allocatedFor()),
+                () -> assertEquals(ALLOCATED_FOR, california.allocatedFor()),
                 () -> assertEquals(new BigDecimal("9375.00"), california.amount()),
                 () -> assertTrue(california.id().startsWith("alloc_")),
 
                 () -> assertEquals(WORKER_ID, newYork.workerId()),
                 () -> assertEquals("NY", newYork.jurisdictionCode()),
-                () -> assertEquals(YEAR, newYork.allocatedFor()),
+                () -> assertEquals(ALLOCATED_FOR, newYork.allocatedFor()),
                 () -> assertEquals(new BigDecimal("3125.00"), newYork.amount())
         );
     }
@@ -59,7 +58,7 @@ class DayCountAllocationStrategyTest {
     void allocate_emptyWorkDays_returnsEmptyList() {
         AllocationStrategy strategy = new DayCountAllocationStrategy();
 
-        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, List.of(), YEAR);
+        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, List.of(), ALLOCATED_FOR);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
@@ -74,7 +73,7 @@ class DayCountAllocationStrategyTest {
                 new WorkDay("day_002", WORKER_ID, "CA", LocalDate.of(2026, 3, 2))
         );
 
-        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, YEAR);
+        List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
         assertEquals(1, result.size());
         assertEquals("CA", result.get(0).jurisdictionCode());
@@ -86,7 +85,7 @@ class DayCountAllocationStrategyTest {
         AllocationStrategy strategy = new DayCountAllocationStrategy();
 
         assertThrows(NullPointerException.class,
-                () -> strategy.allocate(null, TOTAL_INCOME, List.of(), YEAR));
+                () -> strategy.allocate(null, TOTAL_INCOME, List.of(), ALLOCATED_FOR));
     }
 
     @Test
@@ -94,7 +93,7 @@ class DayCountAllocationStrategyTest {
         AllocationStrategy strategy = new DayCountAllocationStrategy();
 
         assertThrows(NullPointerException.class,
-                () -> strategy.allocate(WORKER_ID, null, List.of(), YEAR));
+                () -> strategy.allocate(WORKER_ID, null, List.of(), ALLOCATED_FOR));
     }
 
     @Test
@@ -102,7 +101,7 @@ class DayCountAllocationStrategyTest {
         AllocationStrategy strategy = new DayCountAllocationStrategy();
 
         assertThrows(IllegalArgumentException.class,
-                () -> strategy.allocate(WORKER_ID, new BigDecimal("-1.00"), List.of(), YEAR));
+                () -> strategy.allocate(WORKER_ID, new BigDecimal("-1.00"), List.of(), ALLOCATED_FOR));
     }
 
     @Test
@@ -114,6 +113,6 @@ class DayCountAllocationStrategyTest {
         );
 
         assertThrows(IllegalArgumentException.class,
-                () -> strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, YEAR));
+                () -> strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR));
     }
 }

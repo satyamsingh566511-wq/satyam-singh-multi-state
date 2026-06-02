@@ -2,7 +2,7 @@ package com.uptimecrew.multistate.model;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Year;
+import java.time.LocalDate;
 import java.util.Objects;
 
 public final class IncomeAllocation {
@@ -11,13 +11,13 @@ public final class IncomeAllocation {
     private final String workerId;
     private final String jurisdictionCode;
     private final BigDecimal amount;
-    private final Year allocatedFor;
+    private final LocalDate allocatedFor;
 
     public IncomeAllocation(String id,
                             String workerId,
                             String jurisdictionCode,
                             BigDecimal amount,
-                            Year allocatedFor) {
+                            LocalDate allocatedFor) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(workerId, "workerId");
         Objects.requireNonNull(jurisdictionCode, "jurisdictionCode");
@@ -58,7 +58,7 @@ public final class IncomeAllocation {
         return amount;
     }
 
-    public Year allocatedFor() {
+    public LocalDate allocatedFor() {
         return allocatedFor;
     }
 

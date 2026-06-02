@@ -1,7 +1,7 @@
 package com.uptimecrew.multistate.model;
 
 import java.math.BigDecimal;
-import java.time.Year;
+import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,23 +16,23 @@ class IncomeAllocationTest {
     private static final String WORKER_ID = "wkr_001";
     private static final String JUR_CODE  = "CA";
     private static final BigDecimal AMOUNT = new BigDecimal("12500.00");
-    private static final Year YEAR = Year.of(2026);
+    private static final LocalDate ALLOCATED_FOR = LocalDate.of(2026, 1, 1);
 
     @Test
     void constructor_validInputs_exposesAllAccessors() {
-        IncomeAllocation subject = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, YEAR);
+        IncomeAllocation subject = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR);
 
         assertEquals(ALLOC_ID, subject.id());
         assertEquals(WORKER_ID, subject.workerId());
         assertEquals(JUR_CODE, subject.jurisdictionCode());
         assertEquals(0, AMOUNT.compareTo(subject.amount()));
-        assertEquals(YEAR, subject.allocatedFor());
+        assertEquals(ALLOCATED_FOR, subject.allocatedFor());
     }
 
     @Test
     void constructor_amountWithExtraScale_isNormalizedToScale2HalfUp() {
         IncomeAllocation subject = new IncomeAllocation(
-                ALLOC_ID, WORKER_ID, JUR_CODE, new BigDecimal("100.005"), YEAR);
+                ALLOC_ID, WORKER_ID, JUR_CODE, new BigDecimal("100.005"), ALLOCATED_FOR);
 
         assertEquals(2, subject.amount().scale());
         assertEquals(new BigDecimal("100.01"), subject.amount());
@@ -41,25 +41,25 @@ class IncomeAllocationTest {
     @Test
     void constructor_nullId_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new IncomeAllocation(null, WORKER_ID, JUR_CODE, AMOUNT, YEAR));
+                () -> new IncomeAllocation(null, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR));
     }
 
     @Test
     void constructor_nullWorkerId_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new IncomeAllocation(ALLOC_ID, null, JUR_CODE, AMOUNT, YEAR));
+                () -> new IncomeAllocation(ALLOC_ID, null, JUR_CODE, AMOUNT, ALLOCATED_FOR));
     }
 
     @Test
     void constructor_nullJurisdictionCode_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, null, AMOUNT, YEAR));
+                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, null, AMOUNT, ALLOCATED_FOR));
     }
 
     @Test
     void constructor_nullAmount_throwsNullPointerException() {
         assertThrows(NullPointerException.class,
-                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, null, YEAR));
+                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, null, ALLOCATED_FOR));
     }
 
     @Test
@@ -72,25 +72,25 @@ class IncomeAllocationTest {
     void constructor_negativeAmount_throwsIllegalArgumentException() {
         assertThrows(IllegalArgumentException.class,
                 () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                        new BigDecimal("-0.01"), YEAR));
+                        new BigDecimal("-0.01"), ALLOCATED_FOR));
     }
 
     @Test
     void constructor_emptyJurisdictionCode_throwsIllegalArgumentException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, "", AMOUNT, YEAR));
+                () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, "", AMOUNT, ALLOCATED_FOR));
     }
 
     @Test
     void constructor_blankWorkerId_throwsIllegalArgumentException() {
         assertThrows(IllegalArgumentException.class,
-                () -> new IncomeAllocation(ALLOC_ID, "   ", JUR_CODE, AMOUNT, YEAR));
+                () -> new IncomeAllocation(ALLOC_ID, "   ", JUR_CODE, AMOUNT, ALLOCATED_FOR));
     }
 
     @Test
     void equals_sameFieldValues_areEqualAndShareHashCode() {
-        IncomeAllocation a = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, YEAR);
-        IncomeAllocation b = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, YEAR);
+        IncomeAllocation a = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR);
+        IncomeAllocation b = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR);
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
@@ -99,16 +99,16 @@ class IncomeAllocationTest {
     @Test
     void equals_differentAmount_areNotEqual() {
         IncomeAllocation a = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                new BigDecimal("12500.00"), YEAR);
+                new BigDecimal("12500.00"), ALLOCATED_FOR);
         IncomeAllocation b = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                new BigDecimal("12500.01"), YEAR);
+                new BigDecimal("12500.01"), ALLOCATED_FOR);
 
         assertNotEquals(a, b);
     }
 
     @Test
     void toString_containsAllFields() {
-        String rendered = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, YEAR).toString();
+        String rendered = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR).toString();
 
         assertTrue(rendered.contains(ALLOC_ID));
         assertTrue(rendered.contains(WORKER_ID));

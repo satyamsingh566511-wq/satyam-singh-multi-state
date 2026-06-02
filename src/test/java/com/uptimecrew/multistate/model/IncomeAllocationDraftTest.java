@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class IncomeAllocationDraftTest {
 
@@ -54,5 +55,17 @@ class IncomeAllocationDraftTest {
         );
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
+    }
+
+    @Test
+    void toString_containsAllFields() {
+        String rendered = new IncomeAllocationDraft(
+            "alloc-synth-001", new BigDecimal("12500.00"), "CA", LocalDate.of(2026, 3, 1)
+        ).toString();
+
+        assertTrue(rendered.contains("alloc-synth-001"));
+        assertTrue(rendered.contains("12500.00"));
+        assertTrue(rendered.contains("CA"));
+        assertTrue(rendered.contains("2026-03-01"));
     }
 }
