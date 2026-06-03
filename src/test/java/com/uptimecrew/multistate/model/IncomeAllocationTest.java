@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -68,11 +70,17 @@ class IncomeAllocationTest {
                 () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, null));
     }
 
-    @Test
-    void constructor_negativeAmount_throwsIllegalArgumentException() {
+    @ParameterizedTest(name = "rejects amount = {0}")
+    @CsvSource({
+            "-0.01",        // smallest representable negative at scale 2 (boundary)
+            "-1.00",        // small negative
+            "-12500.00",    // sample-amount magnitude, negated
+            "-100000.00"    // large negative
+    })
+    void constructor_negativeAmount_throwsIllegalArgumentException(String amount) {
         assertThrows(IllegalArgumentException.class,
                 () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                        new BigDecimal("-0.01"), ALLOCATED_FOR));
+                        new BigDecimal(amount), ALLOCATED_FOR));
     }
 
     @Test
