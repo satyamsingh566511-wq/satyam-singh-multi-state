@@ -80,7 +80,7 @@ class IncomeAllocationTest {
     void constructor_negativeAmount_throwsIllegalArgumentException(String amount) {
         assertThrows(IllegalArgumentException.class,
                 () -> new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                        new BigDecimal("-0.01"), ALLOCATED_FOR));
+                        new BigDecimal(amount), ALLOCATED_FOR));
     }
 
     @Test
