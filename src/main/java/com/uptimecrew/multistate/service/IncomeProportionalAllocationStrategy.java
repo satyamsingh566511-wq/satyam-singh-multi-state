@@ -1,5 +1,6 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
@@ -78,8 +79,9 @@ public final class IncomeProportionalAllocationStrategy implements AllocationStr
             }
             String code = day.jurisdictionCode();
             if (!jurisdictionWeights.containsKey(code)) {
-                throw new IllegalArgumentException(
-                        "no income weight configured for jurisdiction " + code);
+                throw new JurisdictionUnsupportedException(
+                        "jurisdiction " + code + " is not supported by this strategy: "
+                                + "no income weight configured (work day " + day.id() + ")");
             }
             daysByJurisdiction.merge(code, 1L, Long::sum);
         }

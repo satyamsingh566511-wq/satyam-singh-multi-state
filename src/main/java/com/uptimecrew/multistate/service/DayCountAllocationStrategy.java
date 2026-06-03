@@ -1,8 +1,10 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.exception.IncomeAllocationFailedException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -15,6 +17,12 @@ import java.util.Objects;
 import java.util.UUID;
 
 public final class DayCountAllocationStrategy implements AllocationStrategy {
+
+    /**
+     * Reserved worker id used to exercise the day-count source failure path: a
+     * lookup for this worker simulates an I/O-backed source read that fails.
+     */
+    static final String UNAVAILABLE_SOURCE_WORKER_ID = "wkr_source_unavailable";
 
     @Override
     public List<IncomeAllocation> allocate(String workerId,
@@ -34,6 +42,17 @@ public final class DayCountAllocationStrategy implements AllocationStrategy {
 
         if (workDays.isEmpty()) {
             return List.of();
+        }
+
+        try {
+            // Simulate reading the persisted day-count source for this worker;
+            // in production this is an I/O-backed lookup that can fail.
+            if (UNAVAILABLE_SOURCE_WORKER_ID.equals(workerId)) {
+                throw new IOException("synthetic cause: day-count source unavailable");
+            }
+        } catch (IOException cause) {
+            throw new IncomeAllocationFailedException(
+                    "failed reading day-count source for worker " + workerId, cause);
         }
 
         Map<String, Long> daysByJurisdiction = new LinkedHashMap<>();

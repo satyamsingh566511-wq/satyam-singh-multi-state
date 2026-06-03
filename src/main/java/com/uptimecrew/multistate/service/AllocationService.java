@@ -1,7 +1,11 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -17,6 +21,8 @@ import java.util.Objects;
  * or hybrid split purely by what the caller wires in.
  */
 public final class AllocationService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
 
     private static final BigDecimal CENT = new BigDecimal("0.01");
 
@@ -46,8 +52,22 @@ public final class AllocationService {
 
         BigDecimal normalizedTotal = totalIncome.setScale(2, RoundingMode.HALF_UP);
 
-        List<IncomeAllocation> allocations =
-                strategy.allocate(workerId, normalizedTotal, workDays, allocatedFor);
+        LOG.info("invoking strategy={} for workerId={} total={} workDays={}",
+                strategy.getClass().getSimpleName(), workerId, normalizedTotal,
+                workDays == null ? 0 : workDays.size());
+
+        List<IncomeAllocation> allocations;
+        try {
+            allocations = strategy.allocate(workerId, normalizedTotal, workDays, allocatedFor);
+        } catch (AllocationException ex) {
+            // WARN on a known domain failure: log message + cause so the stack
+            // trace renders, then rethrow so a higher layer decides recovery.
+            LOG.warn("strategy failed: {}", ex.getMessage(), ex);
+            throw ex;
+        }
+
+        LOG.info("strategy={} returned allocations={}",
+                strategy.getClass().getSimpleName(), allocations.size());
 
         if (allocations.isEmpty()) {
             return allocations;
