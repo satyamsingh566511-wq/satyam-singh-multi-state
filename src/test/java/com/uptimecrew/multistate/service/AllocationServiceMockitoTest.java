@@ -70,4 +70,93 @@ class AllocationServiceMockitoTest {
         verify(strategy, times(1)).allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR));
         assertTrue(result.isEmpty());
     }
+
+    /**
+     * Residual reconciliation when the strategy output sums to a cent LESS than
+     * the total — the classic proportional-rounding shortfall. The leftover cent
+     * must land on the largest allocation, and the result must sum exactly to the
+     * total. Stubbing the strategy lets us force a precise residual that a real
+     * strategy would only produce by coincidence.
+     */
+    @Test
+    void allocate_strategyOutputUndershootsTotalByOneCent_assignsResidualToLargestAllocation() {
+        BigDecimal total = new BigDecimal("100.00");
+        // 50.00 + 30.00 + 19.99 = 99.99, one cent short of the total.
+        List<IncomeAllocation> understated = List.of(
+                new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("50.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("30.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_tx", WORKER_ID, "TX", new BigDecimal("19.99"), ALLOCATED_FOR));
+
+        when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
+                .thenReturn(understated);
+
+        AllocationService subject = new AllocationService(strategy);
+        List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
+
+        // Original list order is preserved; only the largest line absorbs the cent.
+        assertEquals("CA", result.get(0).jurisdictionCode());
+        assertEquals(new BigDecimal("50.01"), result.get(0).amount());
+        assertEquals(new BigDecimal("30.00"), result.get(1).amount());
+        assertEquals(new BigDecimal("19.99"), result.get(2).amount());
+        assertEquals(total, sumOf(result));
+    }
+
+    /**
+     * The mirror case: the strategy output sums to a cent MORE than the total
+     * (over-allocation). The surplus cent must be reclaimed from the largest
+     * allocation so the audit total still reconciles exactly.
+     */
+    @Test
+    void allocate_strategyOutputOvershootsTotalByOneCent_reclaimsResidualFromLargestAllocation() {
+        BigDecimal total = new BigDecimal("100.00");
+        // 50.00 + 30.00 + 20.01 = 100.01, one cent over the total.
+        List<IncomeAllocation> overstated = List.of(
+                new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("50.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("30.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_tx", WORKER_ID, "TX", new BigDecimal("20.01"), ALLOCATED_FOR));
+
+        when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
+                .thenReturn(overstated);
+
+        AllocationService subject = new AllocationService(strategy);
+        List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
+
+        assertEquals(new BigDecimal("49.99"), result.get(0).amount());
+        assertEquals(new BigDecimal("30.00"), result.get(1).amount());
+        assertEquals(new BigDecimal("20.01"), result.get(2).amount());
+        assertEquals(total, sumOf(result));
+    }
+
+    /**
+     * A multi-cent residual must be spread one cent at a time across the
+     * allocations round-robin (largest first), never dumped on a single line.
+     * Three equal lines short by a full dollar means 100 cents distributed as
+     * 34/33/33, with the extra cent going to the first line by the tie-break.
+     */
+    @Test
+    void allocate_strategyOutputShortByManyCents_spreadsResidualAcrossAllocations() {
+        BigDecimal total = new BigDecimal("100.00");
+        // 33.00 * 3 = 99.00, a full dollar (100 cents) short of the total.
+        List<IncomeAllocation> shortfall = List.of(
+                new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("33.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("33.00"), ALLOCATED_FOR),
+                new IncomeAllocation("alloc_tx", WORKER_ID, "TX", new BigDecimal("33.00"), ALLOCATED_FOR));
+
+        when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
+                .thenReturn(shortfall);
+
+        AllocationService subject = new AllocationService(strategy);
+        List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
+
+        assertEquals(new BigDecimal("33.34"), result.get(0).amount());
+        assertEquals(new BigDecimal("33.33"), result.get(1).amount());
+        assertEquals(new BigDecimal("33.33"), result.get(2).amount());
+        assertEquals(total, sumOf(result));
+    }
+
+    private static BigDecimal sumOf(List<IncomeAllocation> allocations) {
+        return allocations.stream()
+                .map(IncomeAllocation::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
