@@ -1,14 +1,6 @@
 plugins {
     id 'java'
-}
-
-group   = 'com.uptimecrew.multistate'
-version = '0.1.0-SNAPSHOT'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
-    }
+    id 'jacoco'                                  // (1) JaCoCo plugin
 }
 
 repositories {
@@ -18,7 +10,6 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testRuntimeOnly    'org.junit.platform:junit-platform-launcher'
 
     testImplementation 'org.mockito:mockito-core:5.10.0'
@@ -32,8 +23,26 @@ dependencies {
 
 test {
     useJUnitPlatform()
-    testLogging {
-        events 'passed', 'skipped', 'failed'
-        showStandardStreams = true
+    finalizedBy jacocoTestReport                // (2) report after every test run
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        html.required = true                    // (3) HTML report for humans
+        xml.required  = true                    // (4) XML for CI tools
     }
 }
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = 'BRANCH'              // (5) branch coverage, not line
+                minimum = 0.70                  // (6) floor: fail the build below 70%
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification  // (7) gate `./gradlew check`
