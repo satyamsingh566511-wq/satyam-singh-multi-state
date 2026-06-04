@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import static com.uptimecrew.multistate.model.IncomeAllocationTestDataBuilder.aIncomeAllocation;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,8 +34,9 @@ class IncomeAllocationTest {
 
     @Test
     void constructor_amountWithExtraScale_isNormalizedToScale2HalfUp() {
-        IncomeAllocation subject = new IncomeAllocation(
-                ALLOC_ID, WORKER_ID, JUR_CODE, new BigDecimal("100.005"), ALLOCATED_FOR);
+        IncomeAllocation subject = aIncomeAllocation()
+                .withAmount(new BigDecimal("100.005"))
+                .build();
 
         assertEquals(2, subject.amount().scale());
         assertEquals(new BigDecimal("100.01"), subject.amount());
@@ -97,8 +99,8 @@ class IncomeAllocationTest {
 
     @Test
     void equals_sameFieldValues_areEqualAndShareHashCode() {
-        IncomeAllocation a = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR);
-        IncomeAllocation b = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR);
+        IncomeAllocation a = aIncomeAllocation().withAmount(AMOUNT).build();
+        IncomeAllocation b = aIncomeAllocation().withAmount(AMOUNT).build();
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());
@@ -106,17 +108,15 @@ class IncomeAllocationTest {
 
     @Test
     void equals_differentAmount_areNotEqual() {
-        IncomeAllocation a = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                new BigDecimal("12500.00"), ALLOCATED_FOR);
-        IncomeAllocation b = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE,
-                new BigDecimal("12500.01"), ALLOCATED_FOR);
+        IncomeAllocation a = aIncomeAllocation().withAmount(new BigDecimal("12500.00")).build();
+        IncomeAllocation b = aIncomeAllocation().withAmount(new BigDecimal("12500.01")).build();
 
         assertNotEquals(a, b);
     }
 
     @Test
     void toString_containsAllFields() {
-        String rendered = new IncomeAllocation(ALLOC_ID, WORKER_ID, JUR_CODE, AMOUNT, ALLOCATED_FOR).toString();
+        String rendered = aIncomeAllocation().withAmount(AMOUNT).build().toString();
 
         assertTrue(rendered.contains(ALLOC_ID));
         assertTrue(rendered.contains(WORKER_ID));
