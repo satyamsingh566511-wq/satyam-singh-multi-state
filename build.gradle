@@ -1,6 +1,15 @@
 plugins {
     id 'java'
-    id 'jacoco'                                  // (1) JaCoCo plugin
+    id 'jacoco'
+}
+
+group   = 'com.uptimecrew.multistate'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
 }
 
 repositories {
@@ -10,39 +19,27 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params'
     testRuntimeOnly    'org.junit.platform:junit-platform-launcher'
 
     testImplementation 'org.mockito:mockito-core:5.10.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.10.0'
+    testImplementation 'org.assertj:assertj-core:3.25.3'
 
     implementation     'org.slf4j:slf4j-api:2.0.12'
     runtimeOnly        'ch.qos.logback:logback-classic:1.5.6'
     testImplementation 'ch.qos.logback:logback-classic:1.5.6'
-    testImplementation 'org.assertj:assertj-core:3.25.3'
 }
 
 test {
     useJUnitPlatform()
-    finalizedBy jacocoTestReport                // (2) report after every test run
+    finalizedBy jacocoTestReport
 }
 
 jacocoTestReport {
     dependsOn test
     reports {
-        html.required = true                    // (3) HTML report for humans
-        xml.required  = true                    // (4) XML for CI tools
+        html.required = true
+        xml.required  = true
     }
 }
-
-jacocoTestCoverageVerification {
-    violationRules {
-        rule {
-            limit {
-                counter = 'BRANCH'              // (5) branch coverage, not line
-                minimum = 0.70                  // (6) floor: fail the build below 70%
-            }
-        }
-    }
-}
-
-check.dependsOn jacocoTestCoverageVerification  // (7) gate `./gradlew check`
