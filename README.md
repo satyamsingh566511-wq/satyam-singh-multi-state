@@ -59,6 +59,8 @@ Packages are domain-driven, rooted at `com.uptimecrew.multistate`:
 - `model/` — immutable value types: `Jurisdiction`, `WorkDay`, `IncomeAllocation`.
 - `service/` — allocation engine: `AllocationService`, the `AllocationStrategy`
   implementations, and the `AllocationStrategies` factory.
+- `db/` — Postgres schema (`V1__schema.sql`), transactional seed (`V2__seed.sql`),
+  and verification queries (`verify.sql`); see [db/README.md](db/README.md).
 
 Tests use JUnit 5 (Jupiter) and Mockito, mirror the production package layout,
 and follow the `methodUnderTest_condition_expectedOutcome` naming convention.

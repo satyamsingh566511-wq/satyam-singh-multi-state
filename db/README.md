@@ -12,9 +12,9 @@ SQL ↔ record mapping is explicit.
 
 ```mermaid
 erDiagram
-    TENANT ||--o{ ALLOCATION : "is allocated income in"
-    JURISDICTION ||--o{ ALLOCATION : "receives allocation of"
-    JURISDICTION ||--o{ TENANT : "is residency of"
+    TENANT ||--o{ ALLOCATION : "1-to-many: is allocated income in"
+    JURISDICTION ||--o{ ALLOCATION : "1-to-many: receives allocation of"
+    JURISDICTION ||--o{ TENANT : "1-to-many: is residency of"
 
     TENANT {
         varchar     id                          PK "synthetic id, e.g. wkr_ / ten_"
