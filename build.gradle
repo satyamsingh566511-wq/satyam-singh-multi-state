@@ -29,10 +29,41 @@ dependencies {
     implementation     'org.slf4j:slf4j-api:2.0.12'
     runtimeOnly        'ch.qos.logback:logback-classic:1.5.6'
     testImplementation 'ch.qos.logback:logback-classic:1.5.6'
+
+    // ── NEW for W2 D2: Testcontainers + Postgres JDBC driver ───────────
+    testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.postgresql:postgresql:42.7.3'
 }
 
 test {
     useJUnitPlatform()
+
+    // Testcontainers/docker-java defaults to Docker API 1.32, which modern
+    // daemons (Rancher Desktop, recent Docker Desktop, colima) reject with
+    // "client version 1.32 is too old. Minimum supported API version is 1.41".
+    // Pin a modern API version on the forked test JVM.
+    systemProperty 'api.version', '1.41'
+
+    // Rancher Desktop on macOS exposes its Docker socket at ~/.rd/docker.sock
+    // (there is no /var/run/docker.sock). Auto-wire it for the test JVM so the
+    // Testcontainers integration tests run with no manual env setup. This is a
+    // no-op on Docker Desktop / colima — that socket file won't exist — so the
+    // block stays portable for teammates. Anything already set in the
+    // environment wins.
+    def rancherSocket = file("${System.getProperty('user.home')}/.rd/docker.sock")
+    if (rancherSocket.exists()) {
+        if (System.getenv('DOCKER_HOST') == null) {
+            environment 'DOCKER_HOST', "unix://${rancherSocket}"
+        }
+        if (System.getenv('TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE') == null) {
+            // Ryuk bind-mounts the daemon socket; inside the Rancher VM it lives
+            // at /var/run/docker.sock, not the host path above.
+            environment 'TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE', '/var/run/docker.sock'
+        }
+    }
+
     finalizedBy jacocoTestReport
 }
 
