@@ -3,6 +3,8 @@ package com.uptimecrew.multistate.service;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -22,6 +24,7 @@ import java.util.UUID;
  * income-proportional one (or vice versa) by a single tunable knob, without
  * either delegate needing to know about the other.
  */
+@Component
 public final class HybridAllocationStrategy implements AllocationStrategy {
 
     private static final BigDecimal ONE = BigDecimal.ONE;
@@ -29,6 +32,22 @@ public final class HybridAllocationStrategy implements AllocationStrategy {
     private final AllocationStrategy primary;
     private final AllocationStrategy secondary;
     private final BigDecimal primaryWeight;
+
+    /**
+     * Spring-default constructor. This strategy is genuinely parameterized by two
+     * distinct delegate strategies and a blend ratio, which the container cannot
+     * synthesise, so this no-arg constructor seeds a 50/50 blend of a plain
+     * day-count and a weighted day-count split purely so the bean can be
+     * component-scanned. The {@code @Primary} {@link DayCountAllocationStrategy} is
+     * what {@link AllocationService} injects; a real hybrid allocation constructs
+     * an instance with explicit delegates and weight via
+     * {@link #HybridAllocationStrategy(AllocationStrategy, AllocationStrategy, BigDecimal)}.
+     */
+    public HybridAllocationStrategy() {
+        this(new DayCountAllocationStrategy(),
+                new WeightedDayCountAllocationStrategy(),
+                new BigDecimal("0.5"));
+    }
 
     public HybridAllocationStrategy(AllocationStrategy primary,
                                     AllocationStrategy secondary,
