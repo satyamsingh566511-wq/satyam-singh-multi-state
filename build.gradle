@@ -1,6 +1,8 @@
 plugins {
     id 'java'
     id 'jacoco'
+    id 'org.springframework.boot'        version '3.4.10'
+    id 'io.spring.dependency-management' version '1.1.5'
 }
 
 group   = 'com.uptimecrew.multistate'
@@ -17,6 +19,13 @@ repositories {
 }
 
 dependencies {
+    // ── Spring Boot (NEW for W2 D3) ────────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    runtimeOnly    'org.springframework.boot:spring-boot-starter-jdbc'
+    runtimeOnly    'org.postgresql:postgresql:42.7.3'
+
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
@@ -26,15 +35,20 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.10.0'
     testImplementation 'org.assertj:assertj-core:3.25.3'
 
-    implementation     'org.slf4j:slf4j-api:2.0.12'
-    runtimeOnly        'ch.qos.logback:logback-classic:1.5.6'
-    testImplementation 'ch.qos.logback:logback-classic:1.5.6'
+    // slf4j + logback are provided transitively by spring-boot-starter at
+    // mutually consistent, BOM-managed versions. Hard-pinning logback-classic
+    // here (was 1.5.6) skews against Spring Boot's newer logback-core and
+    // throws AbstractMethodError at startup, so we let the BOM manage them.
+    implementation     'org.slf4j:slf4j-api'
 
     // ── NEW for W2 D2: Testcontainers + Postgres JDBC driver ───────────
     testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.postgresql:postgresql:42.7.3'
+
+    // ── Spring Boot test starter (NEW for W2 D3) ──────────────────────
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 test {
