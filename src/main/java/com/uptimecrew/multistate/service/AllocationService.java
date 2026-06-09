@@ -28,7 +28,7 @@ import java.util.Objects;
  * appears in production code.
  */
 @Service
-final class AllocationService {
+public final class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
 
