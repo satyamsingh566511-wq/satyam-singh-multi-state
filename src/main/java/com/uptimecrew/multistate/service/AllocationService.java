@@ -56,13 +56,16 @@ public final class AllocationService {
                                            BigDecimal totalIncome,
                                            List<WorkDay> workDays,
                                            LocalDate allocatedFor) {
+        Objects.requireNonNull(workerId, "workerId");
         Objects.requireNonNull(totalIncome, "totalIncome");
+        Objects.requireNonNull(workDays, "workDays");
+        Objects.requireNonNull(allocatedFor, "allocatedFor");
 
         BigDecimal normalizedTotal = totalIncome.setScale(2, RoundingMode.HALF_UP);
 
         LOG.info("invoking strategy={} for workerId={} total={} workDays={}",
                 strategy.getClass().getSimpleName(), workerId, normalizedTotal,
-                workDays == null ? 0 : workDays.size());
+                workDays.size());
 
         List<IncomeAllocation> allocations;
         try {

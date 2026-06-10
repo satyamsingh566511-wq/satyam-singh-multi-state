@@ -47,10 +47,17 @@ Requires a JDK 17+ toolchain; the Gradle wrapper handles everything else.
 
 # Run a single test class
 ./gradlew test --tests "com.uptimecrew.multistate.service.AllocationServiceMockitoTest"
+
+# Boot the Spring Boot service (defaults to the `local` profile, port 8080)
+./gradlew bootRun
+
+# Once running, check liveness via the Actuator health endpoint
+curl http://localhost:8080/actuator/health
 ```
 
-There is no runnable entry point — this is a domain library, consumed by other
-modules (timeline UI, year-end allocation, audit export).
+The allocation domain (model + strategies) is still a self-contained library,
+but as of Week 2 Day 3 it is wrapped in a bootable Spring Boot service
+(`Application.java`) exposing the Actuator `health` and `info` endpoints.
 
 ## Project layout
 

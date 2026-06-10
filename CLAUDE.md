@@ -13,7 +13,10 @@ drift here causes audit-visible bugs.
 ## How to run / test
 - Build:  ./gradlew build
 - Test:   ./gradlew test
-- Run:    no runnable entry point yet — this is a domain library
+- Run:    ./gradlew bootRun  (Spring Boot service, `local` profile, port 8080)
+- Health: curl http://localhost:8080/actuator/health
+- The allocation domain stays a self-contained library; as of W2 D3 it is
+  wrapped in a bootable Spring Boot app (`Application.java`).
 
 ## Domain rules — non-negotiable
 - All monetary values use `BigDecimal` with `scale == 2`, `RoundingMode.HALF_UP`.
