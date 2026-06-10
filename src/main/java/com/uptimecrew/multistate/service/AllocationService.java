@@ -16,7 +16,6 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,8 +31,11 @@ import java.util.Objects;
  * {@code @Qualifier}-named one), so the {@code new}-the-strategy wiring never
  * appears in production code.
  */
+// Not final: the @Transactional allocate(...) method requires Spring to create a
+// CGLIB proxy of this bean, which subclasses the target — impossible for a final
+// class. (The repo's "final by default" style yields to that framework constraint.)
 @Service
-public final class AllocationService {
+public class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
 
@@ -96,7 +98,7 @@ public final class AllocationService {
         List<IncomeAllocation> reconciled = reconcile(allocations, normalizedTotal);
 
         // Persist the worker entity for this run inside the same transaction.
-        Tenant saved = repository.save(toTenant(workerId, reconciled));
+        Tenant saved = repository.save(toTenant(workerId));
         LOG.info("persisted tenant id={}", saved.getId());
 
         return reconciled;
@@ -128,16 +130,16 @@ public final class AllocationService {
 
     /**
      * Builds the primary {@link Tenant} entity recording this allocation run.
-     * Residency is taken from the jurisdiction carrying the largest allocated
-     * amount (the worker's dominant jurisdiction), or left null when there are
-     * no allocations to attribute.
+     *
+     * <p>Status is {@code ACTIVE} — one of the values the {@code tenant_status_check}
+     * constraint allows ({@code ACTIVE/INACTIVE/SUSPENDED}); "ALLOCATED" is not a
+     * tenant lifecycle state and the schema rejects it. Residency is left null: the
+     * allocation jurisdictions are not guaranteed to exist in the {@code jurisdiction}
+     * reference table, and {@code residency_jurisdiction_code} is a RESTRICT foreign
+     * key, so attributing one here would risk a constraint violation.
      */
-    private static Tenant toTenant(String workerId, List<IncomeAllocation> allocations) {
-        String residency = allocations.stream()
-                .max(Comparator.comparing(IncomeAllocation::amount))
-                .map(IncomeAllocation::jurisdictionCode)
-                .orElse(null);
-        return new Tenant(workerId, workerId, workerId, "ALLOCATED", residency, Instant.now());
+    private static Tenant toTenant(String workerId) {
+        return new Tenant(workerId, workerId, workerId, "ACTIVE", null, Instant.now());
     }
 
     /**

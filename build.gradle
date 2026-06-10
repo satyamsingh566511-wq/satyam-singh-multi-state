@@ -1,8 +1,8 @@
 plugins {
     id 'java'
     id 'jacoco'
-    id 'org.springframework.boot'        version '3.3.2'
-    id 'io.spring.dependency-management' version '1.1.5'
+    id 'org.springframework.boot'        version '4.0.6'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group   = 'com.uptimecrew.multistate'
@@ -21,7 +21,9 @@ repositories {
 dependencies {
     // ── Spring Boot (NEW for W2 D3) ────────────────────────────────────
     implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Spring Boot 4 split the web stack into focused modules: the old
+    // spring-boot-starter-web was renamed to spring-boot-starter-webmvc.
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly    'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly    'org.postgresql:postgresql:42.7.3'
@@ -30,6 +32,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+    // Spring Boot 4 modularised the test slices: @DataJpaTest and
+    // @AutoConfigureTestDatabase are no longer carried by starter-test's
+    // spring-boot-test-autoconfigure. Each slice now ships in a per-technology
+    // *-test artifact (versions managed by the Spring Boot BOM).
+    testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
+    testImplementation 'org.springframework.boot:spring-boot-jdbc-test'
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

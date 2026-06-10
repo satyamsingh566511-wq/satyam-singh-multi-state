@@ -35,6 +35,14 @@ spring:
     url: jdbc:postgresql://placeholder:5432/test
     username: test
     password: test
+  jpa:
+    # Never let Hibernate create/alter/validate a schema at startup under test —
+    # the schema is owned by db/V1__schema.sql and applied explicitly by the ITs.
+    # (Rejected the tooling's suggested ddl-auto: update — it would silently mutate
+    # the schema and mask drift.) Repository/context ITs bring their own real
+    # Testcontainers datasource via @ServiceConnection.
+    hibernate:
+      ddl-auto: none
 
 management:
   endpoints:
