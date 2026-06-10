@@ -2,7 +2,6 @@ package com.uptimecrew.multistate;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 
 /**
  * Spring Boot entry point for the multistate application.
@@ -11,13 +10,13 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
  * Week 1 service, its strategies, and the Day 4 repositories are all picked
  * up without explicit configuration.
  *
- * <p>{@code DataSourceAutoConfiguration} is excluded for now: the W2 D3
- * {@code spring-boot-starter-jdbc} + Postgres driver sit on the classpath,
- * but no {@code spring.datasource.url} is configured yet, so auto-config
- * would abort startup ("Failed to determine a suitable driver class").
- * Remove this exclusion on Day 4 once a real datasource is configured.
+ * <p>As of W2 D4 a real datasource is configured in {@code application.yml},
+ * so {@code DataSourceAutoConfiguration} is left enabled — Spring Data JPA
+ * needs the resulting {@code DataSource} to bootstrap the
+ * {@code EntityManagerFactory} and the repositories in
+ * {@code com.uptimecrew.multistate.repository}.
  */
-@SpringBootApplication(exclude = DataSourceAutoConfiguration.class)
+@SpringBootApplication
 public class Application {
 
     public static void main(String[] args) {
