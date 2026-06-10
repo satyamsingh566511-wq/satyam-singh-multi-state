@@ -18,6 +18,7 @@ import ch.qos.logback.core.read.ListAppender;
 import com.uptimecrew.multistate.exception.IncomeAllocationFailedException;
 import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +45,9 @@ class AllocationServiceExceptionPathTest {
     @Mock
     AllocationStrategy strategy;
 
+    @Mock
+    TenantRepository repository;
+
     private Logger logbackLogger;
     private ListAppender<ILoggingEvent> appender;
 
@@ -65,7 +69,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy);
+        AllocationService subject = new AllocationService(strategy, repository);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class)
@@ -79,7 +83,7 @@ class AllocationServiceExceptionPathTest {
                 new IOException("synthetic cause"));
         when(strategy.allocate(any(), any(), any(), any())).thenThrow(failure);
 
-        AllocationService subject = new AllocationService(strategy);
+        AllocationService subject = new AllocationService(strategy, repository);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(IncomeAllocationFailedException.class)
@@ -93,7 +97,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy);
+        AllocationService subject = new AllocationService(strategy, repository);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class);

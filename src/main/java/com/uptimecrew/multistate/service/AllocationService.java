@@ -1,17 +1,22 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -35,9 +40,11 @@ public final class AllocationService {
     private static final BigDecimal CENT = new BigDecimal("0.01");
 
     private final AllocationStrategy strategy;
+    private final TenantRepository repository;
 
-    public AllocationService(AllocationStrategy strategy) {
+    public AllocationService(AllocationStrategy strategy, TenantRepository repository) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
+        this.repository = Objects.requireNonNull(repository, "repository");
     }
 
     /**
@@ -51,7 +58,13 @@ public final class AllocationService {
      * allocations (largest amount first) rather than dumped on a single line or
      * silently dropped. The result is guaranteed to sum exactly to the
      * normalised total, which is what an auditor checks first.
+     *
+     * <p>{@code @Transactional}: the strategy invocation and the
+     * {@link TenantRepository#save(Object)} that records the run share one
+     * transaction, so a persistence failure rolls the whole unit back rather
+     * than leaving a half-written {@link Tenant}.
      */
+    @Transactional
     public List<IncomeAllocation> allocate(String workerId,
                                            BigDecimal totalIncome,
                                            List<WorkDay> workDays,
@@ -80,6 +93,23 @@ public final class AllocationService {
         LOG.info("strategy={} returned allocations={}",
                 strategy.getClass().getSimpleName(), allocations.size());
 
+        List<IncomeAllocation> reconciled = reconcile(allocations, normalizedTotal);
+
+        // Persist the worker entity for this run inside the same transaction.
+        Tenant saved = repository.save(toTenant(workerId, reconciled));
+        LOG.info("persisted tenant id={}", saved.getId());
+
+        return reconciled;
+    }
+
+    /**
+     * Enforces the audit invariant that the allocated amounts sum exactly to
+     * {@code normalizedTotal}, distributing any rounding residual one cent at a
+     * time. Returns the input list unchanged when it is empty or already
+     * reconciles.
+     */
+    private static List<IncomeAllocation> reconcile(List<IncomeAllocation> allocations,
+                                                    BigDecimal normalizedTotal) {
         if (allocations.isEmpty()) {
             return allocations;
         }
@@ -94,6 +124,20 @@ public final class AllocationService {
         }
 
         return List.copyOf(distributeResidual(allocations, residual));
+    }
+
+    /**
+     * Builds the primary {@link Tenant} entity recording this allocation run.
+     * Residency is taken from the jurisdiction carrying the largest allocated
+     * amount (the worker's dominant jurisdiction), or left null when there are
+     * no allocations to attribute.
+     */
+    private static Tenant toTenant(String workerId, List<IncomeAllocation> allocations) {
+        String residency = allocations.stream()
+                .max(Comparator.comparing(IncomeAllocation::amount))
+                .map(IncomeAllocation::jurisdictionCode)
+                .orElse(null);
+        return new Tenant(workerId, workerId, workerId, "ALLOCATED", residency, Instant.now());
     }
 
     /**
