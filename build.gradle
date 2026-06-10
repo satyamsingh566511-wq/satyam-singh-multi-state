@@ -26,6 +26,11 @@ dependencies {
     runtimeOnly    'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly    'org.postgresql:postgresql:42.7.3'
 
+    // ── NEW for W2 D4: Spring Data JPA ─────────────────────────────────
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.junit.jupiter:junit-jupiter-params'
@@ -41,14 +46,12 @@ dependencies {
     // throws AbstractMethodError at startup, so we let the BOM manage them.
     implementation     'org.slf4j:slf4j-api'
 
-    // ── NEW for W2 D2: Testcontainers + Postgres JDBC driver ───────────
+    // ── from W2 D2: Testcontainers + Postgres JDBC ─────────────────────
     testImplementation platform('org.testcontainers:testcontainers-bom:1.19.7')
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.postgresql:postgresql:42.7.3'
-
-    // ── Spring Boot test starter (NEW for W2 D3) ──────────────────────
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
 test {
