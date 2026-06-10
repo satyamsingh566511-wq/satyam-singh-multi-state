@@ -5,6 +5,8 @@ import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -25,9 +27,23 @@ import java.util.UUID;
  * worked on a weekend are ignored entirely, and a jurisdiction with no business
  * days drops out of the result.
  */
+@Component
 public final class WeightedDayCountAllocationStrategy implements AllocationStrategy {
 
     private final Map<String, BigDecimal> jurisdictionWeights;
+
+    /**
+     * Spring-default constructor. This strategy is genuinely parameterized by a
+     * per-jurisdiction weight map, which the container cannot synthesise, so this
+     * no-arg constructor seeds a minimal valid placeholder ({@code US-CA} at
+     * weight 1) purely so the bean can be component-scanned. The {@code @Primary}
+     * {@link DayCountAllocationStrategy} is what {@link AllocationService} injects;
+     * a real weighted allocation constructs an instance with explicit,
+     * caller-supplied weights via {@link #WeightedDayCountAllocationStrategy(Map)}.
+     */
+    public WeightedDayCountAllocationStrategy() {
+        this(Map.of("US-CA", BigDecimal.ONE));
+    }
 
     public WeightedDayCountAllocationStrategy(Map<String, BigDecimal> jurisdictionWeights) {
         Objects.requireNonNull(jurisdictionWeights, "jurisdictionWeights");

@@ -4,6 +4,9 @@ import com.uptimecrew.multistate.exception.IncomeAllocationFailedException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -16,6 +19,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * Plain day-count split. Its no-arg constructor makes it the one strategy Spring
+ * can build with zero configuration, so it is the {@code @Primary} bean injected
+ * into {@link AllocationService}. The weighted and hybrid strategies need runtime
+ * configuration (per-jurisdiction weights, a blend ratio) and are therefore not
+ * component-scanned — callers that need them construct them with that config.
+ */
+@Component
+@Primary
 public final class DayCountAllocationStrategy implements AllocationStrategy {
 
     /**

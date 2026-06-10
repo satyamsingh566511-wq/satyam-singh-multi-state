@@ -6,6 +6,7 @@ import com.uptimecrew.multistate.model.WorkDay;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -19,7 +20,14 @@ import java.util.Objects;
  * splitting logic of its own — the {@link AllocationStrategy} is injected, never
  * constructed here — so the same service can run a day-count, income-weighted,
  * or hybrid split purely by what the caller wires in.
+ *
+ * <p>Spring owns this bean's lifecycle ({@code @Service}). With a single
+ * constructor, Spring 6 injects it without any field-level wiring annotation; it
+ * supplies the {@code @Primary} {@link AllocationStrategy} bean (or a
+ * {@code @Qualifier}-named one), so the {@code new}-the-strategy wiring never
+ * appears in production code.
  */
+@Service
 public final class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
@@ -48,13 +56,16 @@ public final class AllocationService {
                                            BigDecimal totalIncome,
                                            List<WorkDay> workDays,
                                            LocalDate allocatedFor) {
+        Objects.requireNonNull(workerId, "workerId");
         Objects.requireNonNull(totalIncome, "totalIncome");
+        Objects.requireNonNull(workDays, "workDays");
+        Objects.requireNonNull(allocatedFor, "allocatedFor");
 
         BigDecimal normalizedTotal = totalIncome.setScale(2, RoundingMode.HALF_UP);
 
         LOG.info("invoking strategy={} for workerId={} total={} workDays={}",
                 strategy.getClass().getSimpleName(), workerId, normalizedTotal,
-                workDays == null ? 0 : workDays.size());
+                workDays.size());
 
         List<IncomeAllocation> allocations;
         try {

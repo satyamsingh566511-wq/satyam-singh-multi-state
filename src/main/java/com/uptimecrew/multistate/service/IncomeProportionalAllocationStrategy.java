@@ -4,6 +4,8 @@ import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 
+import org.springframework.stereotype.Component;
+
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -24,9 +26,23 @@ import java.util.UUID;
  * split, which is precisely what makes it a distinct strategy: it lets a day
  * worked in a high-rate jurisdiction pull more income than a low-rate one.
  */
+@Component
 public final class IncomeProportionalAllocationStrategy implements AllocationStrategy {
 
     private final Map<String, BigDecimal> jurisdictionWeights;
+
+    /**
+     * Spring-default constructor. This strategy is genuinely parameterized by a
+     * per-jurisdiction weight map, which the container cannot synthesise, so this
+     * no-arg constructor seeds a minimal valid placeholder ({@code US-CA} at
+     * weight 1) purely so the bean can be component-scanned. The {@code @Primary}
+     * {@link DayCountAllocationStrategy} is what {@link AllocationService} injects;
+     * a real income-proportional allocation constructs an instance with explicit,
+     * caller-supplied weights via {@link #IncomeProportionalAllocationStrategy(Map)}.
+     */
+    public IncomeProportionalAllocationStrategy() {
+        this(Map.of("US-CA", BigDecimal.ONE));
+    }
 
     public IncomeProportionalAllocationStrategy(Map<String, BigDecimal> jurisdictionWeights) {
         Objects.requireNonNull(jurisdictionWeights, "jurisdictionWeights");
