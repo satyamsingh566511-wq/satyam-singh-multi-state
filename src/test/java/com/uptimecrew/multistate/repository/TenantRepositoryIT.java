@@ -14,7 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.support.NoOpCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -38,7 +43,25 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(TenantRepositoryIT.CacheTestConfig.class)
 class TenantRepositoryIT {
+
+    /**
+     * The application's {@code @EnableCaching} is meta-present on the
+     * {@code @SpringBootApplication} class that {@code @DataJpaTest} auto-detects,
+     * so this persistence slice activates Spring's cache advisor — which then
+     * fails to start unless a {@link CacheManager} bean exists. The JPA slice does
+     * NOT pull in {@code CacheAutoConfiguration} (no Redis here), so we supply a
+     * {@link NoOpCacheManager}: it satisfies the cache infrastructure without
+     * introducing any caching behaviour that could perturb these JPA assertions.
+     */
+    @TestConfiguration
+    static class CacheTestConfig {
+        @Bean
+        CacheManager cacheManager() {
+            return new NoOpCacheManager();
+        }
+    }
 
     @Container
     @ServiceConnection

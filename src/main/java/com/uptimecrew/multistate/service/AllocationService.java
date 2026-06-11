@@ -4,6 +4,8 @@ import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.readmodel.TenantReadModel;
+import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
@@ -43,10 +45,14 @@ public class AllocationService {
 
     private final AllocationStrategy strategy;
     private final TenantRepository repository;
+    private final TenantReadModelRepository readModelRepository;
 
-    public AllocationService(AllocationStrategy strategy, TenantRepository repository) {
+    public AllocationService(AllocationStrategy strategy,
+                             TenantRepository repository,
+                             TenantReadModelRepository readModelRepository) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
         this.repository = Objects.requireNonNull(repository, "repository");
+        this.readModelRepository = Objects.requireNonNull(readModelRepository, "readModelRepository");
     }
 
     /**
@@ -101,7 +107,42 @@ public class AllocationService {
         Tenant saved = repository.save(toTenant(workerId));
         LOG.info("persisted tenant id={}", saved.getId());
 
+        // Write-through: project the just-saved JPA entity (plus the reconciled
+        // allocations) into the Mongo read model so a later @Cacheable read path
+        // can return the whole tree in one round-trip. Same id on both sides, so
+        // a Mongo lookup and a Postgres lookup resolve the same logical tenant.
+        TenantReadModel projection = toReadModel(saved, reconciled);
+        readModelRepository.save(projection);
+        LOG.info("write-through to mongo id={} primaryState={}",
+                projection.getId(), projection.getPrimaryState());
+
         return reconciled;
+    }
+
+    /**
+     * Projects the saved {@link Tenant} and its reconciled allocations into the
+     * denormalised Mongo {@link TenantReadModel}. {@code primaryState} is the
+     * jurisdiction carrying the largest allocated amount (ties broken by the
+     * first such line), which is the dimension the read model is {@code @Indexed}
+     * on; it falls back to the tenant's residency code when there are no
+     * allocations to rank.
+     */
+    private static TenantReadModel toReadModel(Tenant saved,
+                                               List<IncomeAllocation> allocations) {
+        Instant capturedAt = Instant.now();
+
+        List<TenantReadModel.EmbeddedAllocation> embedded = new ArrayList<>(allocations.size());
+        for (IncomeAllocation a : allocations) {
+            embedded.add(new TenantReadModel.EmbeddedAllocation(
+                    a.jurisdictionCode(), a.amount(), a.allocatedFor(), capturedAt));
+        }
+
+        String primaryState = allocations.stream()
+                .max((a, b) -> a.amount().compareTo(b.amount()))
+                .map(IncomeAllocation::jurisdictionCode)
+                .orElse(saved.getResidencyJurisdictionCode());
+
+        return new TenantReadModel(saved.getId(), primaryState, capturedAt, embedded);
     }
 
     /**
