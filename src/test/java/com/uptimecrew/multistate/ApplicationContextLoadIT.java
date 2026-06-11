@@ -3,13 +3,22 @@ package com.uptimecrew.multistate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.ActiveProfiles;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
@@ -20,15 +29,38 @@ import com.uptimecrew.multistate.service.AllocationService;
  * of the fast unit-test set). {@link SpringBootTest} starts the full
  * application context defined by {@link Application} for the lifetime of this
  * class; {@code @ActiveProfiles("test")} makes the {@code test} profile from
- * application.yml win, so no real datasource is required (the W2 D3 Application
- * already excludes {@code DataSourceAutoConfiguration}).
+ * application.yml win.
+ *
+ * <p>As of W2 D4 {@link Application} keeps {@code DataSourceAutoConfiguration}
+ * enabled and {@link AllocationService#allocate} is {@code @Transactional} and
+ * persists a {@link com.uptimecrew.multistate.entity.Tenant}, so this class needs
+ * a real database — not the placeholder URL in the {@code test} profile. A
+ * Testcontainers {@code postgres:16-alpine} is wired in via {@code @ServiceConnection}
+ * (which overrides the placeholder datasource), and {@link #applySchema()} loads
+ * {@code db/V1__schema.sql} once before the tests so the allocation run has a table
+ * to write to.
  *
  * <p>Field injection is used deliberately — it is acceptable in tests, where the
  * container, not a caller, owns construction.
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Testcontainers
 class ApplicationContextLoadIT {
+
+    @Container
+    @ServiceConnection
+    static final PostgreSQLContainer<?> PG = new PostgreSQLContainer<>("postgres:16-alpine");
+
+    @BeforeAll
+    static void applySchema() throws Exception {
+        // createConnection("") retries until the container is reachable, absorbing
+        // the host port-forward startup race on VM-backed Docker (see TenantQueryIT).
+        try (Connection conn = PG.createConnection("");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
+        }
+    }
 
     @Autowired
     AllocationService service;

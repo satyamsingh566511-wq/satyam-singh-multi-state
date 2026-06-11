@@ -1,15 +1,19 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,17 +31,22 @@ import java.util.Objects;
  * {@code @Qualifier}-named one), so the {@code new}-the-strategy wiring never
  * appears in production code.
  */
+// Not final: the @Transactional allocate(...) method requires Spring to create a
+// CGLIB proxy of this bean, which subclasses the target — impossible for a final
+// class. (The repo's "final by default" style yields to that framework constraint.)
 @Service
-public final class AllocationService {
+public class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
 
     private static final BigDecimal CENT = new BigDecimal("0.01");
 
     private final AllocationStrategy strategy;
+    private final TenantRepository repository;
 
-    public AllocationService(AllocationStrategy strategy) {
+    public AllocationService(AllocationStrategy strategy, TenantRepository repository) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
+        this.repository = Objects.requireNonNull(repository, "repository");
     }
 
     /**
@@ -51,7 +60,13 @@ public final class AllocationService {
      * allocations (largest amount first) rather than dumped on a single line or
      * silently dropped. The result is guaranteed to sum exactly to the
      * normalised total, which is what an auditor checks first.
+     *
+     * <p>{@code @Transactional}: the strategy invocation and the
+     * {@link TenantRepository#save(Object)} that records the run share one
+     * transaction, so a persistence failure rolls the whole unit back rather
+     * than leaving a half-written {@link Tenant}.
      */
+    @Transactional
     public List<IncomeAllocation> allocate(String workerId,
                                            BigDecimal totalIncome,
                                            List<WorkDay> workDays,
@@ -80,6 +95,23 @@ public final class AllocationService {
         LOG.info("strategy={} returned allocations={}",
                 strategy.getClass().getSimpleName(), allocations.size());
 
+        List<IncomeAllocation> reconciled = reconcile(allocations, normalizedTotal);
+
+        // Persist the worker entity for this run inside the same transaction.
+        Tenant saved = repository.save(toTenant(workerId));
+        LOG.info("persisted tenant id={}", saved.getId());
+
+        return reconciled;
+    }
+
+    /**
+     * Enforces the audit invariant that the allocated amounts sum exactly to
+     * {@code normalizedTotal}, distributing any rounding residual one cent at a
+     * time. Returns the input list unchanged when it is empty or already
+     * reconciles.
+     */
+    private static List<IncomeAllocation> reconcile(List<IncomeAllocation> allocations,
+                                                    BigDecimal normalizedTotal) {
         if (allocations.isEmpty()) {
             return allocations;
         }
@@ -94,6 +126,20 @@ public final class AllocationService {
         }
 
         return List.copyOf(distributeResidual(allocations, residual));
+    }
+
+    /**
+     * Builds the primary {@link Tenant} entity recording this allocation run.
+     *
+     * <p>Status is {@code ACTIVE} — one of the values the {@code tenant_status_check}
+     * constraint allows ({@code ACTIVE/INACTIVE/SUSPENDED}); "ALLOCATED" is not a
+     * tenant lifecycle state and the schema rejects it. Residency is left null: the
+     * allocation jurisdictions are not guaranteed to exist in the {@code jurisdiction}
+     * reference table, and {@code residency_jurisdiction_code} is a RESTRICT foreign
+     * key, so attributing one here would risk a constraint violation.
+     */
+    private static Tenant toTenant(String workerId) {
+        return new Tenant(workerId, workerId, workerId, "ACTIVE", null, Instant.now());
     }
 
     /**
@@ -146,22 +192,5 @@ public final class AllocationService {
             }
         }
         return result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AllocationService other)) return false;
-        return strategy.equals(other.strategy);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(strategy);
-    }
-
-    @Override
-    public String toString() {
-        return "AllocationService{strategy=" + strategy + "}";
     }
 }

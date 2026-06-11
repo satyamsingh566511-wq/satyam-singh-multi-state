@@ -9,6 +9,16 @@ spring:
     password: ${DB_PASSWORD:devpass}
     hikari:
       maximum-pool-size: 5
+  jpa:
+    hibernate:
+      # validate (not none): compare every entity mapping to the live schema at
+      # startup so a misnamed column or wrong type fails fast at deploy time
+      # rather than as a buried PSQLException mid-transaction. The schema itself
+      # is owned by db/V1__schema.sql — Hibernate only checks, never mutates.
+      ddl-auto: validate
+    # Disable OSIV: no lazy-loading from the web layer; sessions stay bounded to
+    # the transactional service layer.
+    open-in-view: false
 
 management:
   endpoints:
@@ -35,6 +45,14 @@ spring:
     url: jdbc:postgresql://placeholder:5432/test
     username: test
     password: test
+  jpa:
+    # Never let Hibernate create/alter/validate a schema at startup under test —
+    # the schema is owned by db/V1__schema.sql and applied explicitly by the ITs.
+    # (Rejected the tooling's suggested ddl-auto: update — it would silently mutate
+    # the schema and mask drift.) Repository/context ITs bring their own real
+    # Testcontainers datasource via @ServiceConnection.
+    hibernate:
+      ddl-auto: none
 
 management:
   endpoints:
