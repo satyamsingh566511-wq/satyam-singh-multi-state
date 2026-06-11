@@ -69,10 +69,12 @@ class TenantRepositoryIT {
 
     @BeforeAll
     static void applySchema() throws Exception {
-        // createConnection("") retries until the database is reachable, absorbing
-        // the brief startup race on VM-backed Docker runtimes where the host-side
-        // port forward (PG.getJdbcUrl()) is established just after the in-container
-        // "ready" log — see TenantQueryIT for the same idiom.
+        /*
+         * createConnection("") retries until the database is reachable, absorbing
+         * the brief startup race on VM-backed Docker runtimes where the host-side
+         * port forward (PG.getJdbcUrl()) is established just after the in-container
+         * "ready" log — see TenantQueryIT for the same idiom.
+         */
         try (Connection conn = PG.createConnection("");
              Statement stmt = conn.createStatement()) {
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
@@ -84,16 +86,16 @@ class TenantRepositoryIT {
 
     @Test
     void save_and_find_round_trip() {
-        // Arrange — residency code left null (nullable, avoids the jurisdiction FK).
+        /* Arrange — residency code left null (nullable, avoids the jurisdiction FK). */
         var createdAt = Instant.parse("2026-01-15T00:00:00Z");
         var entity = new Tenant(
                 "ten_round_trip", "Round Trip Co", "ext-round-trip", "ACTIVE", null, createdAt);
 
-        // Act.
+        /* Act. */
         repository.save(entity);
         Optional<Tenant> found = repository.findById("ten_round_trip");
 
-        // Assert — the round-tripped row carries back exactly what was saved.
+        /* Assert — the round-tripped row carries back exactly what was saved. */
         assertThat(found).isPresent().get().satisfies(t -> {
             assertThat(t.getId()).isEqualTo("ten_round_trip");
             assertThat(t.getDisplayName()).isEqualTo("Round Trip Co");
@@ -106,12 +108,12 @@ class TenantRepositoryIT {
 
     @Test
     void derived_finder_returns_only_matching_rows() {
-        // Arrange — two tenants differing only by status (the derived-finder field).
+        /* Arrange — two tenants differing only by status (the derived-finder field). */
         var now = Instant.parse("2026-01-15T00:00:00Z");
         repository.save(new Tenant("ten_active", "Active Co", "ext-active", "ACTIVE", null, now));
         repository.save(new Tenant("ten_inactive", "Inactive Co", "ext-inactive", "INACTIVE", null, now));
 
-        // Act + Assert — findByStatus returns exactly the one matching row.
+        /* Act + Assert — findByStatus returns exactly the one matching row. */
         assertThat(repository.findByStatus("ACTIVE"))
                 .extracting(Tenant::getId)
                 .containsExactly("ten_active");

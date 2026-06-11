@@ -18,23 +18,25 @@ public class Jurisdiction {
 
     @Id
     @Column(name = "code", length = 64)
-    private String code;                            // TEXT natural-key id, application-supplied, never @GeneratedValue
+    private String code;                            /* TEXT natural-key id, application-supplied, never @GeneratedValue */
 
     @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "kind", nullable = false)
-    private String kind;                            // closed taxonomy: COUNTRY/STATE/PROVINCE/CITY
+    private String kind;                            /* closed taxonomy: COUNTRY/STATE/PROVINCE/CITY */
 
     @Column(name = "has_income_tax", nullable = false)
     private boolean hasIncomeTax;
 
-    // marginal tax rate, a fraction in [0,1] — NUMERIC(5,4), BigDecimal not double.
-    // Nullable: unknown or not-applicable for no-income-tax jurisdictions.
+    /*
+     * marginal tax rate, a fraction in [0,1] — NUMERIC(5,4), BigDecimal not double.
+     * Nullable: unknown or not-applicable for no-income-tax jurisdictions.
+     */
     @Column(name = "top_marginal_rate", nullable = true, precision = 5, scale = 4)
     private BigDecimal topMarginalRate;
 
-    protected Jurisdiction() {}                     // required by JPA
+    protected Jurisdiction() {}                     /* required by JPA */
 
     public Jurisdiction(String code,
                         String name,
@@ -45,7 +47,7 @@ public class Jurisdiction {
         this.name = Objects.requireNonNull(name, "name");
         this.kind = Objects.requireNonNull(kind, "kind");
         this.hasIncomeTax = hasIncomeTax;
-        this.topMarginalRate = topMarginalRate;     // nullable
+        this.topMarginalRate = topMarginalRate;     /* nullable */
     }
 
     public String getCode()              { return code; }
@@ -54,7 +56,7 @@ public class Jurisdiction {
     public boolean isHasIncomeTax()      { return hasIncomeTax; }
     public BigDecimal getTopMarginalRate() { return topMarginalRate; }
 
-    // equals/hashCode on the primary key only.
+    /* equals/hashCode on the primary key only. */
     @Override public boolean equals(Object o) { return o instanceof Jurisdiction other && Objects.equals(code, other.code); }
     @Override public int hashCode()           { return Objects.hashCode(code); }
 }

@@ -18,7 +18,7 @@ import org.springframework.cache.annotation.EnableCaching;
  * {@code com.uptimecrew.multistate.repository}.
  */
 @SpringBootApplication
-@EnableCaching                                          // W2 D5: activate Spring's cache abstraction (Redis-backed @Cacheable)
+@EnableCaching                                          /* W2 D5: activate Spring's cache abstraction (Redis-backed @Cacheable) */
 public class Application {
 
     public static void main(String[] args) {

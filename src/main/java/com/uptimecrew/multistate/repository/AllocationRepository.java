@@ -12,11 +12,13 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface AllocationRepository extends JpaRepository<Allocation, String> {
 
-    // (1) Derived query — Spring Data generates the JPQL from the method name.
+    /* (1) Derived query — Spring Data generates the JPQL from the method name. */
     List<Allocation> findByJurisdictionCode(String jurisdictionCode);
 
-    // (2) Explicit @Query JPQL — a SUM aggregate grouped by jurisdiction with a
-    //     HAVING threshold, which the derived-name convention can't express.
+    /*
+     * (2) Explicit @Query JPQL — a SUM aggregate grouped by jurisdiction with a
+     *     HAVING threshold, which the derived-name convention can't express.
+     */
     @Query("SELECT a.jurisdictionCode FROM Allocation a "
             + "GROUP BY a.jurisdictionCode HAVING SUM(a.amount) >= :minTotal")
     List<String> findJurisdictionsWithTotalAtLeast(@Param("minTotal") BigDecimal minTotal);

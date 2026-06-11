@@ -81,8 +81,10 @@ class HybridAllocationStrategyTest {
 
         List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
-        // DayCount: CA 5000 / NY 5000. IncomeProportional (CA w1, NY w3): CA 2500 / NY 7500.
-        // Blend at 0.50: CA = 3750.00, NY = 6250.00.
+        /*
+         * DayCount: CA 5000 / NY 5000. IncomeProportional (CA w1, NY w3): CA 2500 / NY 7500.
+         * Blend at 0.50: CA = 3750.00, NY = 6250.00.
+         */
         assertEquals(2, result.size());
         assertAll(
                 () -> assertEquals("CA", result.get(0).jurisdictionCode()),
@@ -127,7 +129,7 @@ class HybridAllocationStrategyTest {
 
     @Test
     void equals_sameDelegatesAndWeight_areEqualAndShareHashCode() {
-        // DayCountAllocationStrategy compares by identity, so share one delegate instance.
+        /* DayCountAllocationStrategy compares by identity, so share one delegate instance. */
         AllocationStrategy primary = dayCount();
         AllocationStrategy secondary = incomeProportional();
         HybridAllocationStrategy a = new HybridAllocationStrategy(primary, secondary, HALF);

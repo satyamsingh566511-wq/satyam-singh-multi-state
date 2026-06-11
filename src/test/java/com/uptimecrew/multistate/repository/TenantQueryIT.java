@@ -42,19 +42,21 @@ class TenantQueryIT {
         try (Connection conn = openConnection();
              Statement stmt = conn.createStatement()) {
 
-            // V1 is pure DDL — applies cleanly.
+            /* V1 is pure DDL — applies cleanly. */
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
 
-            // V2 commits the good seed, then deliberately attempts a negative
-            // amount to prove the `amount >= 0` CHECK bites. psql swallows that
-            // (no ON_ERROR_STOP) and ROLLBACKs it; over JDBC the multi-statement
-            // script raises the violation AFTER the good rows have COMMITted, so
-            // we expect exactly that check violation here and let it pass.
+            /*
+             * V2 commits the good seed, then deliberately attempts a negative
+             * amount to prove the `amount >= 0` CHECK bites. psql swallows that
+             * (no ON_ERROR_STOP) and ROLLBACKs it; over JDBC the multi-statement
+             * script raises the violation AFTER the good rows have COMMITted, so
+             * we expect exactly that check violation here and let it pass.
+             */
             try {
                 stmt.execute(Files.readString(Path.of("db/V2__seed.sql")));
             } catch (SQLException expected) {
                 if (!"23514".equals(expected.getSQLState())) {
-                    throw expected; // 23514 = check_violation; anything else is real
+                    throw expected; /* 23514 = check_violation; anything else is real */
                 }
             }
         }
@@ -67,8 +69,10 @@ class TenantQueryIT {
                 rs.getString("display_name"),
                 rs.getBigDecimal("total_income")));
 
-        // Seed: only tenant-a (125000) and tenant-b (120000) clear the 100000
-        // threshold, and the query orders by total income DESC.
+        /*
+         * Seed: only tenant-a (125000) and tenant-b (120000) clear the 100000
+         * threshold, and the query orders by total income DESC.
+         */
         assertThat(rows)
                 .as("CTE result rows for seeded tenants above the income threshold")
                 .isNotEmpty()
@@ -89,14 +93,18 @@ class TenantQueryIT {
                 rs.getInt("amount_rank"),
                 rs.getBigDecimal("tenant_total")));
 
-        // The hallmark of a window function: one output row per input row. There
-        // are 6 seeded allocations, so 6 rows survive (GROUP BY would collapse them).
+        /*
+         * The hallmark of a window function: one output row per input row. There
+         * are 6 seeded allocations, so 6 rows survive (GROUP BY would collapse them).
+         */
         assertThat(rows)
                 .as("window function keeps one row per seeded allocation")
                 .hasSize(6);
 
-        // tenant-a is split across two jurisdictions; both rows carry the same
-        // windowed SUM, and the larger amount (US-CA, 80000) ranks 1.
+        /*
+         * tenant-a is split across two jurisdictions; both rows carry the same
+         * windowed SUM, and the larger amount (US-CA, 80000) ranks 1.
+         */
         assertThat(rows)
                 .filteredOn(r -> r.tenantId().equals("tenant-a"))
                 .hasSize(2)
@@ -115,8 +123,10 @@ class TenantQueryIT {
                 rs.getLong("allocation_count"),
                 rs.getBigDecimal("avg_income")));
 
-        // HAVING COUNT(*) >= 2 is a group-level filter: only tenant-a holds more
-        // than one allocation, so it is the single surviving group.
+        /*
+         * HAVING COUNT(*) >= 2 is a group-level filter: only tenant-a holds more
+         * than one allocation, so it is the single surviving group.
+         */
         assertThat(rows)
                 .as("groups surviving HAVING COUNT(*) >= 2")
                 .hasSize(1)
@@ -130,8 +140,10 @@ class TenantQueryIT {
 
     @Test
     void insertingNegativeAmount_violatesAmountCheck_throws() throws Exception {
-        // Exception path: the schema's `amount >= 0` CHECK must reject negative
-        // income with SQLSTATE 23514 (check_violation).
+        /*
+         * Exception path: the schema's `amount >= 0` CHECK must reject negative
+         * income with SQLSTATE 23514 (check_violation).
+         */
         try (Connection conn = openConnection();
              Statement stmt = conn.createStatement()) {
 
@@ -145,7 +157,7 @@ class TenantQueryIT {
         }
     }
 
-    // ── helpers ────────────────────────────────────────────────────────────
+    /* ── helpers ──────────────────────────────────────────────────────────── */
 
     /**
      * Opens a JDBC connection to the seeded container. Uses the container's own
@@ -185,7 +197,7 @@ class TenantQueryIT {
                 }
                 isResultSet = stmt.getMoreResults();
                 if (!isResultSet && stmt.getUpdateCount() == -1) {
-                    break; // no further ResultSet and no further update count
+                    break; /* no further ResultSet and no further update count */
                 }
             }
         }

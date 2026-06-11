@@ -50,9 +50,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @ActiveProfiles("test")
 class TenantPolyglotIT {
 
-    // CACHE_NAME on AllocationService is package-private to ...service, so it is not
-    // visible from this package — mirror the literal value Spring registers the cache
-    // under instead of referencing the constant.
+    /*
+     * CACHE_NAME on AllocationService is package-private to ...service, so it is not
+     * visible from this package — mirror the literal value Spring registers the cache
+     * under instead of referencing the constant.
+     */
     private static final String CACHE_NAME = "multistate.byId";
 
     @Container
@@ -85,19 +87,21 @@ class TenantPolyglotIT {
 
     @Test
     void write_path_populates_postgres_AND_mongo() {
-        // Arrange — one worker, two jurisdictions across two days; the @Primary
-        // day-count strategy splits the income and the service write-through saves
-        // a Tenant to Postgres AND a TenantReadModel (same id) to Mongo.
+        /*
+         * Arrange — one worker, two jurisdictions across two days; the @Primary
+         * day-count strategy splits the income and the service write-through saves
+         * a Tenant to Postgres AND a TenantReadModel (same id) to Mongo.
+         */
         String workerId = "wkr_polyglot_write";
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_w1", workerId, "US-CA", LocalDate.of(2026, 1, 6)),
                 new WorkDay("day_w2", workerId, "US-NY", LocalDate.of(2026, 1, 7)));
 
-        // Act.
+        /* Act. */
         service.allocate(workerId, new BigDecimal("1000.00"), workDays, LocalDate.of(2026, 12, 31));
         Optional<TenantReadModel> mongoSide = service.findById(workerId);
 
-        // Assert — the read model now resolves from Mongo for that id.
+        /* Assert — the read model now resolves from Mongo for that id. */
         assertThat(mongoSide)
                 .as("read model projected into Mongo by the write-through path")
                 .isPresent()
@@ -110,18 +114,22 @@ class TenantPolyglotIT {
 
     @Test
     void second_read_is_served_from_redis() {
-        // Arrange — write through so the read path has something to cache; an empty
-        // Optional is not cached (unless = "#result == null"), so the data must exist.
+        /*
+         * Arrange — write through so the read path has something to cache; an empty
+         * Optional is not cached (unless = "#result == null"), so the data must exist.
+         */
         String workerId = "wkr_polyglot_cache";
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_c1", workerId, "US-CA", LocalDate.of(2026, 2, 3)));
         service.allocate(workerId, new BigDecimal("500.00"), workDays, LocalDate.of(2026, 12, 31));
 
-        // Act — first read is a cache miss that populates Redis under the worker id.
+        /* Act — first read is a cache miss that populates Redis under the worker id. */
         service.findById(workerId);
 
-        // Assert — a subsequent read would now be served from Redis: the cache entry
-        // exists after the first call.
+        /*
+         * Assert — a subsequent read would now be served from Redis: the cache entry
+         * exists after the first call.
+         */
         var cached = cacheManager.getCache(CACHE_NAME).get(workerId);
         assertThat(cached).as("cache entry after first read").isNotNull();
     }

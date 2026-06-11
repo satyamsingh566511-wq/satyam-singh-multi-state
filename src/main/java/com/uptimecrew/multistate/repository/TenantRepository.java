@@ -11,11 +11,13 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, String> {
 
-    // (1) Derived query — Spring Data generates the JPQL from the method name.
+    /* (1) Derived query — Spring Data generates the JPQL from the method name. */
     List<Tenant> findByStatus(String status);
 
-    // (2) Explicit @Query JPQL — an aggregate over the allocations relationship
-    //     with a HAVING clause, which the derived-name convention can't express.
+    /*
+     * (2) Explicit @Query JPQL — an aggregate over the allocations relationship
+     *     with a HAVING clause, which the derived-name convention can't express.
+     */
     @Query("SELECT t FROM Tenant t JOIN t.allocations a "
             + "GROUP BY t HAVING COUNT(a) >= :minLines")
     List<Tenant> findWithAtLeastNAllocations(@Param("minLines") long minLines);

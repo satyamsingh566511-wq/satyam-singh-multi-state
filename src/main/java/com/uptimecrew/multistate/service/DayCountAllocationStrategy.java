@@ -57,8 +57,10 @@ public final class DayCountAllocationStrategy implements AllocationStrategy {
         }
 
         try {
-            // Simulate reading the persisted day-count source for this worker;
-            // in production this is an I/O-backed lookup that can fail.
+            /*
+             * Simulate reading the persisted day-count source for this worker;
+             * in production this is an I/O-backed lookup that can fail.
+             */
             if (UNAVAILABLE_SOURCE_WORKER_ID.equals(workerId)) {
                 throw new IOException("synthetic cause: day-count source unavailable");
             }

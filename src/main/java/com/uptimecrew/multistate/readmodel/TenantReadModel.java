@@ -32,14 +32,14 @@ public class TenantReadModel implements Serializable {
     @Id
     private String id;
 
-    @Indexed                                        // secondary index — index-backed lookup by state
+    @Indexed                                        /* secondary index — index-backed lookup by state */
     private String primaryState;
 
     private Instant capturedAt;
 
-    private List<EmbeddedAllocation> allocations = new ArrayList<>();   // embedded, NOT a foreign reference
+    private List<EmbeddedAllocation> allocations = new ArrayList<>();   /* embedded, NOT a foreign reference */
 
-    public TenantReadModel() {}                     // required by Spring Data Mongo
+    public TenantReadModel() {}                     /* required by Spring Data Mongo */
 
     public TenantReadModel(String id,
                            String primaryState,
@@ -70,7 +70,7 @@ public class TenantReadModel implements Serializable {
         private LocalDate allocatedFor;
         private Instant createdAt;
 
-        public EmbeddedAllocation() {}              // required by Spring Data Mongo
+        public EmbeddedAllocation() {}              /* required by Spring Data Mongo */
 
         public EmbeddedAllocation(String jurisdictionCode,
                                   BigDecimal amount,

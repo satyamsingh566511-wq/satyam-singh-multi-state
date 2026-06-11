@@ -35,9 +35,11 @@ import java.util.Optional;
  * {@code @Qualifier}-named one), so the {@code new}-the-strategy wiring never
  * appears in production code.
  */
-// Not final: the @Transactional allocate(...) method requires Spring to create a
-// CGLIB proxy of this bean, which subclasses the target — impossible for a final
-// class. (The repo's "final by default" style yields to that framework constraint.)
+/*
+ * Not final: the @Transactional allocate(...) method requires Spring to create a
+ * CGLIB proxy of this bean, which subclasses the target — impossible for a final
+ * class. (The repo's "final by default" style yields to that framework constraint.)
+ */
 @Service
 public class AllocationService {
 
@@ -96,8 +98,10 @@ public class AllocationService {
         try {
             allocations = strategy.allocate(workerId, normalizedTotal, workDays, allocatedFor);
         } catch (AllocationException ex) {
-            // WARN on a known domain failure: log message + cause so the stack
-            // trace renders, then rethrow so a higher layer decides recovery.
+            /*
+             * WARN on a known domain failure: log message + cause so the stack
+             * trace renders, then rethrow so a higher layer decides recovery.
+             */
             LOG.warn("strategy failed: {}", ex.getMessage(), ex);
             throw ex;
         }
@@ -107,14 +111,16 @@ public class AllocationService {
 
         List<IncomeAllocation> reconciled = reconcile(allocations, normalizedTotal);
 
-        // Persist the worker entity for this run inside the same transaction.
+        /* Persist the worker entity for this run inside the same transaction. */
         Tenant saved = repository.save(toTenant(workerId));
         LOG.info("persisted tenant id={}", saved.getId());
 
-        // Write-through: project the just-saved JPA entity (plus the reconciled
-        // allocations) into the Mongo read model so a later @Cacheable read path
-        // can return the whole tree in one round-trip. Same id on both sides, so
-        // a Mongo lookup and a Postgres lookup resolve the same logical tenant.
+        /*
+         * Write-through: project the just-saved JPA entity (plus the reconciled
+         * allocations) into the Mongo read model so a later @Cacheable read path
+         * can return the whole tree in one round-trip. Same id on both sides, so
+         * a Mongo lookup and a Postgres lookup resolve the same logical tenant.
+         */
         TenantReadModel projection = toReadModel(saved, reconciled);
         readModelRepository.save(projection);
         LOG.info("write-through to mongo id={} primaryState={}",
@@ -144,10 +150,12 @@ public class AllocationService {
             return fromMongo;
         }
 
-        // Fallback: rebuild the read-model projection from the JPA entity. The
-        // entity's allocations are a LAZY @OneToMany not loaded outside a session,
-        // so the rebuilt projection carries primaryState (residency code) but no
-        // embedded allocations — the Mongo write-through is the authoritative copy.
+        /*
+         * Fallback: rebuild the read-model projection from the JPA entity. The
+         * entity's allocations are a LAZY @OneToMany not loaded outside a session,
+         * so the rebuilt projection carries primaryState (residency code) but no
+         * embedded allocations — the Mongo write-through is the authoritative copy.
+         */
         return repository.findById(id)
                 .map(e -> new TenantReadModel(
                         e.getId(), e.getResidencyJurisdictionCode(), Instant.now(), List.of()));
@@ -232,8 +240,10 @@ public class AllocationService {
         BigDecimal step = pennies > 0 ? CENT : CENT.negate();
         int remaining = Math.abs(pennies);
 
-        // Indices ordered by amount descending, ties broken by original position
-        // so the distribution is deterministic.
+        /*
+         * Indices ordered by amount descending, ties broken by original position
+         * so the distribution is deterministic.
+         */
         Integer[] order = new Integer[allocations.size()];
         for (int i = 0; i < order.length; i++) {
             order[i] = i;
