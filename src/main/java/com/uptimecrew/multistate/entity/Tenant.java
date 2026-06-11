@@ -12,9 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-// Primary entity — one row per taxpayer entity (the Week 1 "worker").
-// JPA needs a no-arg constructor (protected is fine) AND mutable state, so
-// entities cannot be Java records. State is private; expose getters only.
+/**
+ * Primary entity — one row per taxpayer entity (the Week 1 "worker").
+ * JPA needs a no-arg constructor (protected is fine) AND mutable state, so
+ * entities cannot be Java records. State is private; expose getters only.
+ */
 @Entity
 @Table(schema = "multistate", name = "tenant")
 public class Tenant {

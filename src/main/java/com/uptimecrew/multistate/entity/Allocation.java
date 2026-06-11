@@ -12,9 +12,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Objects;
 
-// Child entity — computed income allocation per tenant per jurisdiction per
-// period. Persisted form of the Week 1 IncomeAllocation record. No @OneToMany
-// here: it only carries the @ManyToOne back-reference to its owning Tenant.
+/**
+ * Child entity — computed income allocation per tenant per jurisdiction per
+ * period. Persisted form of the Week 1 IncomeAllocation record. No @OneToMany
+ * here: it only carries the @ManyToOne back-reference to its owning Tenant.
+ */
 @Entity
 @Table(schema = "multistate", name = "allocation")
 public class Allocation {

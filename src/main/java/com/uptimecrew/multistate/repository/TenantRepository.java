@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-// Primary repository (Task 2 reference pattern). PK type is String (Tenant.id).
+/** Primary repository (Task 2 reference pattern). PK type is String (Tenant.id). */
 @Repository
 public interface TenantRepository extends JpaRepository<Tenant, String> {
 

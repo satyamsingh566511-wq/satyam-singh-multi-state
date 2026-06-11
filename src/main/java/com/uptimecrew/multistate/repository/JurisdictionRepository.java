@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-// Reference-table repository. PK type is String (Jurisdiction.code).
+/** Reference-table repository. PK type is String (Jurisdiction.code). */
 @Repository
 public interface JurisdictionRepository extends JpaRepository<Jurisdiction, String> {
 

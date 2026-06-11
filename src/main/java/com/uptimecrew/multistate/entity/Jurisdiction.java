@@ -7,9 +7,11 @@ import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.util.Objects;
 
-// Reference entity — taxing authorities (countries, states). The stable natural
-// code (e.g. 'US-CA') IS the identity, so the PK column is `code`, not `id`.
-// A pure reference table: no @OneToMany collection, just mapped columns.
+/**
+ * Reference entity — taxing authorities (countries, states). The stable natural
+ * code (e.g. 'US-CA') IS the identity, so the PK column is `code`, not `id`.
+ * A pure reference table: no @OneToMany collection, just mapped columns.
+ */
 @Entity
 @Table(schema = "multistate", name = "jurisdiction")
 public class Jurisdiction {

@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-// Child-entity repository. PK type is String (Allocation.id).
+/** Child-entity repository. PK type is String (Allocation.id). */
 @Repository
 public interface AllocationRepository extends JpaRepository<Allocation, String> {
 

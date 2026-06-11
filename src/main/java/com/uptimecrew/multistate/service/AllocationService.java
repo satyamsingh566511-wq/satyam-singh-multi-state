@@ -193,21 +193,4 @@ public class AllocationService {
         }
         return result;
     }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof AllocationService other)) return false;
-        return strategy.equals(other.strategy);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(strategy);
-    }
-
-    @Override
-    public String toString() {
-        return "AllocationService{strategy=" + strategy + "}";
-    }
 }
