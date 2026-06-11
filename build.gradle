@@ -31,6 +31,11 @@ dependencies {
     // ── NEW for W2 D4: Spring Data JPA ─────────────────────────────────
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
+    // ── NEW for W2 D5: Spring Data MongoDB + Redis + Cache abstraction ──
+    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     // Spring Boot 4 modularised the test slices: @DataJpaTest and
@@ -61,6 +66,11 @@ dependencies {
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.postgresql:postgresql:42.7.3'
+
+    // ── NEW for W2 D5: Testcontainers MongoDB module ───────────────────
+    testImplementation 'org.testcontainers:mongodb'
+    // Redis test uses the core GenericContainer with the redis:7-alpine image —
+    // no extra Testcontainers module needed for simple use.
 }
 
 test {

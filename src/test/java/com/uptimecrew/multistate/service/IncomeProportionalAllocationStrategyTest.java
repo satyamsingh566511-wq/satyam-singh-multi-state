@@ -79,7 +79,7 @@ class IncomeProportionalAllocationStrategyTest {
 
         List<IncomeAllocation> result = strategy.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
-        // CA weighted = 2*1 = 2, NY weighted = 1*3 = 3, total = 5 -> CA 40%, NY 60%.
+        /* CA weighted = 2*1 = 2, NY weighted = 1*3 = 3, total = 5 -> CA 40%, NY 60%. */
         assertEquals(2, result.size());
         assertAll(
                 () -> assertEquals("CA", result.get(0).jurisdictionCode()),

@@ -21,7 +21,7 @@ class WeightedDayCountAllocationStrategyTest {
     private static final LocalDate ALLOCATED_FOR = LocalDate.of(2026, 1, 1);
     private static final BigDecimal TOTAL_INCOME = new BigDecimal("10000.00");
 
-    // March 2026 calendar anchors used throughout these tests.
+    /* March 2026 calendar anchors used throughout these tests. */
     private static final LocalDate MONDAY = LocalDate.of(2026, 3, 2);
     private static final LocalDate TUESDAY = LocalDate.of(2026, 3, 3);
     private static final LocalDate WEDNESDAY = LocalDate.of(2026, 3, 4);
@@ -35,17 +35,17 @@ class WeightedDayCountAllocationStrategyTest {
     @Test
     @DisplayName("allocate, business days across two jurisdictions, weights shares by the per-state factor")
     void allocate_businessDaysAcrossTwoJurisdictions_weightsSharesByStateFactor() {
-        // Arrange: two CA business days (weight 1.00) and one NY business day (weight 2.00).
+        /* Arrange: two CA business days (weight 1.00) and one NY business day (weight 2.00). */
         WeightedDayCountAllocationStrategy subject = new WeightedDayCountAllocationStrategy(WEIGHTS);
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_001", WORKER_ID, "CA", MONDAY),
                 new WorkDay("day_002", WORKER_ID, "CA", TUESDAY),
                 new WorkDay("day_003", WORKER_ID, "NY", WEDNESDAY));
 
-        // Act: split the income across jurisdictions by weighted business-day count.
+        /* Act: split the income across jurisdictions by weighted business-day count. */
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
-        // Assert: CA weighted = 2*1.00 = 2.00, NY weighted = 1*2.00 = 2.00, so each gets half.
+        /* Assert: CA weighted = 2*1.00 = 2.00, NY weighted = 1*2.00 = 2.00, so each gets half. */
         assertThat(result).hasSize(2);
         assertThat(result)
                 .extracting(IncomeAllocation::jurisdictionCode, IncomeAllocation::amount)
@@ -57,12 +57,12 @@ class WeightedDayCountAllocationStrategyTest {
     @Test
     @DisplayName("allocate, business day in an unconfigured jurisdiction, throws jurisdiction unsupported")
     void allocate_unsupportedJurisdiction_throwsJurisdictionUnsupportedException() {
-        // Arrange: a business work day in TX, which has no configured weight.
+        /* Arrange: a business work day in TX, which has no configured weight. */
         WeightedDayCountAllocationStrategy subject = new WeightedDayCountAllocationStrategy(WEIGHTS);
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_001", WORKER_ID, "TX", MONDAY));
 
-        // Act + Assert: the unsupported jurisdiction is rejected with the Day 4 domain exception.
+        /* Act + Assert: the unsupported jurisdiction is rejected with the Day 4 domain exception. */
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class)
                 .hasMessageContaining("TX");
@@ -71,17 +71,17 @@ class WeightedDayCountAllocationStrategyTest {
     @Test
     @DisplayName("allocate, weekend days mixed in, excludes them and allocates only business days")
     void allocate_weekendDaysPresent_excludesThemFromAllocation() {
-        // Arrange: CA worked one weekday; NY worked only the weekend, so NY has no business days.
+        /* Arrange: CA worked one weekday; NY worked only the weekend, so NY has no business days. */
         WeightedDayCountAllocationStrategy subject = new WeightedDayCountAllocationStrategy(WEIGHTS);
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_001", WORKER_ID, "CA", MONDAY),
                 new WorkDay("day_002", WORKER_ID, "NY", SATURDAY),
                 new WorkDay("day_003", WORKER_ID, "NY", SUNDAY));
 
-        // Act: only the single CA business day should drive the allocation.
+        /* Act: only the single CA business day should drive the allocation. */
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR);
 
-        // Assert: NY is dropped entirely; CA absorbs the full income.
+        /* Assert: NY is dropped entirely; CA absorbs the full income. */
         assertThat(result).hasSize(1);
         assertThat(result.get(0).jurisdictionCode()).isEqualTo("CA");
         assertThat(result.get(0).amount()).isEqualByComparingTo(new BigDecimal("10000.00"));
@@ -90,13 +90,13 @@ class WeightedDayCountAllocationStrategyTest {
     @Test
     @DisplayName("allocate, no business days recorded, throws income allocation failed")
     void allocate_noBusinessDays_throwsIncomeAllocationFailedException() {
-        // Arrange: every recorded day falls on a weekend, leaving nothing to weight.
+        /* Arrange: every recorded day falls on a weekend, leaving nothing to weight. */
         WeightedDayCountAllocationStrategy subject = new WeightedDayCountAllocationStrategy(WEIGHTS);
         List<WorkDay> workDays = List.of(
                 new WorkDay("day_001", WORKER_ID, "CA", SATURDAY),
                 new WorkDay("day_002", WORKER_ID, "NY", SUNDAY));
 
-        // Act + Assert: an allocation with zero weighted business days fails with the Day 4 exception.
+        /* Act + Assert: an allocation with zero weighted business days fails with the Day 4 exception. */
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, workDays, ALLOCATED_FOR))
                 .isInstanceOf(IncomeAllocationFailedException.class)
                 .hasMessageContaining("business day");

@@ -23,7 +23,7 @@ public class Tenant {
 
     @Id
     @Column(length = 64)
-    private String id;                                              // TEXT id, application-generated, never @GeneratedValue
+    private String id;                                              /* TEXT id, application-generated, never @GeneratedValue */
 
     @Column(name = "display_name", nullable = false)
     private String displayName;
@@ -34,19 +34,19 @@ public class Tenant {
     @Column(name = "status", nullable = false)
     private String status;
 
-    @Column(name = "residency_jurisdiction_code", nullable = true)  // nullable: residency may be unknown at onboarding
+    @Column(name = "residency_jurisdiction_code", nullable = true)  /* nullable: residency may be unknown at onboarding */
     private String residencyJurisdictionCode;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
     @OneToMany(mappedBy = "tenant",
-               fetch = FetchType.LAZY,                              // LAZY to dodge N+1
+               fetch = FetchType.LAZY,                              /* LAZY to dodge N+1 */
                cascade = CascadeType.ALL,
                orphanRemoval = true)
     private List<Allocation> allocations = new ArrayList<>();
 
-    protected Tenant() {}                                           // required by JPA
+    protected Tenant() {}                                           /* required by JPA */
 
     public Tenant(String id,
                   String displayName,
@@ -58,7 +58,7 @@ public class Tenant {
         this.displayName = Objects.requireNonNull(displayName, "displayName");
         this.externalRef = Objects.requireNonNull(externalRef, "externalRef");
         this.status = Objects.requireNonNull(status, "status");
-        this.residencyJurisdictionCode = residencyJurisdictionCode;   // nullable
+        this.residencyJurisdictionCode = residencyJurisdictionCode;   /* nullable */
         this.createdAt = Objects.requireNonNull(createdAt, "createdAt");
     }
 
@@ -70,7 +70,7 @@ public class Tenant {
     public Instant getCreatedAt()                  { return createdAt; }
     public List<Allocation> getAllocations()       { return allocations; }
 
-    // equals/hashCode on the primary key only — never on the lazy collection.
+    /* equals/hashCode on the primary key only — never on the lazy collection. */
     @Override public boolean equals(Object o) { return o instanceof Tenant other && Objects.equals(id, other.id); }
     @Override public int hashCode()           { return Objects.hashCode(id); }
 }

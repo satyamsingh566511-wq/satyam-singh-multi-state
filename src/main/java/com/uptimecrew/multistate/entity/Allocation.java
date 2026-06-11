@@ -23,26 +23,26 @@ public class Allocation {
 
     @Id
     @Column(length = 64)
-    private String id;                              // TEXT id, application-generated, never @GeneratedValue
+    private String id;                              /* TEXT id, application-generated, never @GeneratedValue */
 
-    @ManyToOne(fetch = FetchType.LAZY)              // LAZY to dodge N+1
+    @ManyToOne(fetch = FetchType.LAZY)              /* LAZY to dodge N+1 */
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
     @Column(name = "jurisdiction_code", nullable = false)
     private String jurisdictionCode;
 
-    // money is NUMERIC(12,2) — BigDecimal, never double/float.
+    /* money is NUMERIC(12,2) — BigDecimal, never double/float. */
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
     @Column(name = "allocated_for", nullable = false)
-    private LocalDate allocatedFor;                 // calendar period — LocalDate, not a timestamp
+    private LocalDate allocatedFor;                 /* calendar period — LocalDate, not a timestamp */
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    protected Allocation() {}                       // required by JPA
+    protected Allocation() {}                       /* required by JPA */
 
     public Allocation(String id,
                       Tenant tenant,
@@ -65,7 +65,7 @@ public class Allocation {
     public LocalDate getAllocatedFor()     { return allocatedFor; }
     public Instant getCreatedAt()          { return createdAt; }
 
-    // equals/hashCode on the primary key only.
+    /* equals/hashCode on the primary key only. */
     @Override public boolean equals(Object o) { return o instanceof Allocation other && Objects.equals(id, other.id); }
     @Override public int hashCode()           { return Objects.hashCode(id); }
 }

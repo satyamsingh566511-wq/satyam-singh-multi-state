@@ -14,6 +14,7 @@ import java.util.List;
 
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -37,9 +38,12 @@ class AllocationServiceMockitoTest {
     @Mock
     TenantRepository repository;
 
+    @Mock
+    TenantReadModelRepository readModelRepository;
+
     @BeforeEach
     void stubRepositorySave() {
-        // Canonical save stub: return the entity passed in, unchanged.
+        /* Canonical save stub: return the entity passed in, unchanged. */
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -52,19 +56,23 @@ class AllocationServiceMockitoTest {
 
     @Test
     void allocate_validInputs_delegatesToStrategyAndReturnsItsResultUnchanged() {
-        // A single allocation summing exactly to the total, so the service's
-        // residual reconciliation is a no-op and the strategy's result passes
+        /*
+         * A single allocation summing exactly to the total, so the service's
+         * residual reconciliation is a no-op and the strategy's result passes
+         */
         List<IncomeAllocation> stubbed = List.of(
                 new IncomeAllocation("alloc_001", WORKER_ID, "CA", TOTAL_INCOME, ALLOCATED_FOR));
 
         when(strategy.allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(stubbed);
 
-        AllocationService subject = new AllocationService(strategy, repository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR);
 
-        // The strategy was invoked exactly once with the exact inputs the
-        // service received (after scale normalisation, which leaves 12500.00)
+        /*
+         * The strategy was invoked exactly once with the exact inputs the
+         * service received (after scale normalisation, which leaves 12500.00)
+         */
         verify(strategy).allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR));
         assertEquals(stubbed, result);
         assertEquals(1, result.size());
@@ -76,7 +84,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(List.of());
 
-        AllocationService subject = new AllocationService(strategy, repository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR);
 
         verify(strategy, times(1)).allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR));
@@ -93,7 +101,7 @@ class AllocationServiceMockitoTest {
     @Test
     void allocate_strategyOutputUndershootsTotalByOneCent_assignsResidualToLargestAllocation() {
         BigDecimal total = new BigDecimal("100.00");
-        // 50.00 + 30.00 + 19.99 = 99.99, one cent short of the total.
+        /* 50.00 + 30.00 + 19.99 = 99.99, one cent short of the total. */
         List<IncomeAllocation> understated = List.of(
                 new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("50.00"), ALLOCATED_FOR),
                 new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("30.00"), ALLOCATED_FOR),
@@ -102,10 +110,10 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(understated);
 
-        AllocationService subject = new AllocationService(strategy, repository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
-        // Original list order is preserved; only the largest line absorbs the cent.
+        /* Original list order is preserved; only the largest line absorbs the cent. */
         assertEquals("CA", result.get(0).jurisdictionCode());
         assertEquals(new BigDecimal("50.01"), result.get(0).amount());
         assertEquals(new BigDecimal("30.00"), result.get(1).amount());
@@ -121,7 +129,7 @@ class AllocationServiceMockitoTest {
     @Test
     void allocate_strategyOutputOvershootsTotalByOneCent_reclaimsResidualFromLargestAllocation() {
         BigDecimal total = new BigDecimal("100.00");
-        // 50.00 + 30.00 + 20.01 = 100.01, one cent over the total.
+        /* 50.00 + 30.00 + 20.01 = 100.01, one cent over the total. */
         List<IncomeAllocation> overstated = List.of(
                 new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("50.00"), ALLOCATED_FOR),
                 new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("30.00"), ALLOCATED_FOR),
@@ -130,7 +138,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(overstated);
 
-        AllocationService subject = new AllocationService(strategy, repository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
         assertEquals(new BigDecimal("49.99"), result.get(0).amount());
@@ -148,7 +156,7 @@ class AllocationServiceMockitoTest {
     @Test
     void allocate_strategyOutputShortByManyCents_spreadsResidualAcrossAllocations() {
         BigDecimal total = new BigDecimal("100.00");
-        // 33.00 * 3 = 99.00, a full dollar (100 cents) short of the total.
+        /* 33.00 * 3 = 99.00, a full dollar (100 cents) short of the total. */
         List<IncomeAllocation> shortfall = List.of(
                 new IncomeAllocation("alloc_ca", WORKER_ID, "CA", new BigDecimal("33.00"), ALLOCATED_FOR),
                 new IncomeAllocation("alloc_ny", WORKER_ID, "NY", new BigDecimal("33.00"), ALLOCATED_FOR),
@@ -157,7 +165,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(shortfall);
 
-        AllocationService subject = new AllocationService(strategy, repository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
         assertEquals(new BigDecimal("33.34"), result.get(0).amount());

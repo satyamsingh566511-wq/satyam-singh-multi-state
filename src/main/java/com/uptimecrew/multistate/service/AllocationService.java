@@ -4,10 +4,13 @@ import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.readmodel.TenantReadModel;
+import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Application-facing entry point for year-end income allocation. It owns no
@@ -31,22 +35,30 @@ import java.util.Objects;
  * {@code @Qualifier}-named one), so the {@code new}-the-strategy wiring never
  * appears in production code.
  */
-// Not final: the @Transactional allocate(...) method requires Spring to create a
-// CGLIB proxy of this bean, which subclasses the target — impossible for a final
-// class. (The repo's "final by default" style yields to that framework constraint.)
+/*
+ * Not final: the @Transactional allocate(...) method requires Spring to create a
+ * CGLIB proxy of this bean, which subclasses the target — impossible for a final
+ * class. (The repo's "final by default" style yields to that framework constraint.)
+ */
 @Service
 public class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
 
+    static final String CACHE_NAME = "multistate.byId";
+
     private static final BigDecimal CENT = new BigDecimal("0.01");
 
     private final AllocationStrategy strategy;
     private final TenantRepository repository;
+    private final TenantReadModelRepository readModelRepository;
 
-    public AllocationService(AllocationStrategy strategy, TenantRepository repository) {
+    public AllocationService(AllocationStrategy strategy,
+                             TenantRepository repository,
+                             TenantReadModelRepository readModelRepository) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
         this.repository = Objects.requireNonNull(repository, "repository");
+        this.readModelRepository = Objects.requireNonNull(readModelRepository, "readModelRepository");
     }
 
     /**
@@ -86,8 +98,10 @@ public class AllocationService {
         try {
             allocations = strategy.allocate(workerId, normalizedTotal, workDays, allocatedFor);
         } catch (AllocationException ex) {
-            // WARN on a known domain failure: log message + cause so the stack
-            // trace renders, then rethrow so a higher layer decides recovery.
+            /*
+             * WARN on a known domain failure: log message + cause so the stack
+             * trace renders, then rethrow so a higher layer decides recovery.
+             */
             LOG.warn("strategy failed: {}", ex.getMessage(), ex);
             throw ex;
         }
@@ -97,11 +111,80 @@ public class AllocationService {
 
         List<IncomeAllocation> reconciled = reconcile(allocations, normalizedTotal);
 
-        // Persist the worker entity for this run inside the same transaction.
+        /* Persist the worker entity for this run inside the same transaction. */
         Tenant saved = repository.save(toTenant(workerId));
         LOG.info("persisted tenant id={}", saved.getId());
 
+        /*
+         * Write-through: project the just-saved JPA entity (plus the reconciled
+         * allocations) into the Mongo read model so a later @Cacheable read path
+         * can return the whole tree in one round-trip. Same id on both sides, so
+         * a Mongo lookup and a Postgres lookup resolve the same logical tenant.
+         */
+        TenantReadModel projection = toReadModel(saved, reconciled);
+        readModelRepository.save(projection);
+        LOG.info("write-through to mongo id={} primaryState={}",
+                projection.getId(), projection.getPrimaryState());
+
         return reconciled;
+    }
+
+    /**
+     * Read path fronted by Redis: {@code @Cacheable} short-circuits on a cache hit
+     * before this body runs, so the INFO log below only fires on a miss. On a miss
+     * we read the denormalised Mongo read model first (one round-trip for the whole
+     * tree), falling back to a fresh projection rebuilt from the Postgres JPA entity
+     * so a Mongo wipe doesn't break the read path.
+     *
+     * <p>{@code unless = "#result == null"} keeps a {@code null}/empty result out of
+     * the cache. Spring evaluates the SpEL against the unwrapped {@link Optional}, so
+     * a present {@code Optional} is cached and an {@link Optional#empty()} (returned
+     * as {@code null} here) is not — a transient not-found never locks in.
+     */
+    @Cacheable(value = CACHE_NAME, unless = "#result == null")
+    public Optional<TenantReadModel> findById(String id) {
+        LOG.info("cache miss on id={}; reading from mongo", id);
+
+        Optional<TenantReadModel> fromMongo = readModelRepository.findById(id);
+        if (fromMongo.isPresent()) {
+            return fromMongo;
+        }
+
+        /*
+         * Fallback: rebuild the read-model projection from the JPA entity. The
+         * entity's allocations are a LAZY @OneToMany not loaded outside a session,
+         * so the rebuilt projection carries primaryState (residency code) but no
+         * embedded allocations — the Mongo write-through is the authoritative copy.
+         */
+        return repository.findById(id)
+                .map(e -> new TenantReadModel(
+                        e.getId(), e.getResidencyJurisdictionCode(), Instant.now(), List.of()));
+    }
+
+    /**
+     * Projects the saved {@link Tenant} and its reconciled allocations into the
+     * denormalised Mongo {@link TenantReadModel}. {@code primaryState} is the
+     * jurisdiction carrying the largest allocated amount (ties broken by the
+     * first such line), which is the dimension the read model is {@code @Indexed}
+     * on; it falls back to the tenant's residency code when there are no
+     * allocations to rank.
+     */
+    private static TenantReadModel toReadModel(Tenant saved,
+                                               List<IncomeAllocation> allocations) {
+        Instant capturedAt = Instant.now();
+
+        List<TenantReadModel.EmbeddedAllocation> embedded = new ArrayList<>(allocations.size());
+        for (IncomeAllocation a : allocations) {
+            embedded.add(new TenantReadModel.EmbeddedAllocation(
+                    a.jurisdictionCode(), a.amount(), a.allocatedFor(), capturedAt));
+        }
+
+        String primaryState = allocations.stream()
+                .max((a, b) -> a.amount().compareTo(b.amount()))
+                .map(IncomeAllocation::jurisdictionCode)
+                .orElse(saved.getResidencyJurisdictionCode());
+
+        return new TenantReadModel(saved.getId(), primaryState, capturedAt, embedded);
     }
 
     /**
@@ -157,8 +240,10 @@ public class AllocationService {
         BigDecimal step = pennies > 0 ? CENT : CENT.negate();
         int remaining = Math.abs(pennies);
 
-        // Indices ordered by amount descending, ties broken by original position
-        // so the distribution is deterministic.
+        /*
+         * Indices ordered by amount descending, ties broken by original position
+         * so the distribution is deterministic.
+         */
         Integer[] order = new Integer[allocations.size()];
         for (int i = 0; i < order.length; i++) {
             order[i] = i;

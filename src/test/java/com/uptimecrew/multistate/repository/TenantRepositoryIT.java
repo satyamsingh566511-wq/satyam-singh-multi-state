@@ -14,7 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.support.NoOpCacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -38,7 +43,25 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@Import(TenantRepositoryIT.CacheTestConfig.class)
 class TenantRepositoryIT {
+
+    /**
+     * The application's {@code @EnableCaching} is meta-present on the
+     * {@code @SpringBootApplication} class that {@code @DataJpaTest} auto-detects,
+     * so this persistence slice activates Spring's cache advisor — which then
+     * fails to start unless a {@link CacheManager} bean exists. The JPA slice does
+     * NOT pull in {@code CacheAutoConfiguration} (no Redis here), so we supply a
+     * {@link NoOpCacheManager}: it satisfies the cache infrastructure without
+     * introducing any caching behaviour that could perturb these JPA assertions.
+     */
+    @TestConfiguration
+    static class CacheTestConfig {
+        @Bean
+        CacheManager cacheManager() {
+            return new NoOpCacheManager();
+        }
+    }
 
     @Container
     @ServiceConnection
@@ -46,10 +69,12 @@ class TenantRepositoryIT {
 
     @BeforeAll
     static void applySchema() throws Exception {
-        // createConnection("") retries until the database is reachable, absorbing
-        // the brief startup race on VM-backed Docker runtimes where the host-side
-        // port forward (PG.getJdbcUrl()) is established just after the in-container
-        // "ready" log — see TenantQueryIT for the same idiom.
+        /*
+         * createConnection("") retries until the database is reachable, absorbing
+         * the brief startup race on VM-backed Docker runtimes where the host-side
+         * port forward (PG.getJdbcUrl()) is established just after the in-container
+         * "ready" log — see TenantQueryIT for the same idiom.
+         */
         try (Connection conn = PG.createConnection("");
              Statement stmt = conn.createStatement()) {
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
@@ -61,16 +86,16 @@ class TenantRepositoryIT {
 
     @Test
     void save_and_find_round_trip() {
-        // Arrange — residency code left null (nullable, avoids the jurisdiction FK).
+        /* Arrange — residency code left null (nullable, avoids the jurisdiction FK). */
         var createdAt = Instant.parse("2026-01-15T00:00:00Z");
         var entity = new Tenant(
                 "ten_round_trip", "Round Trip Co", "ext-round-trip", "ACTIVE", null, createdAt);
 
-        // Act.
+        /* Act. */
         repository.save(entity);
         Optional<Tenant> found = repository.findById("ten_round_trip");
 
-        // Assert — the round-tripped row carries back exactly what was saved.
+        /* Assert — the round-tripped row carries back exactly what was saved. */
         assertThat(found).isPresent().get().satisfies(t -> {
             assertThat(t.getId()).isEqualTo("ten_round_trip");
             assertThat(t.getDisplayName()).isEqualTo("Round Trip Co");
@@ -83,12 +108,12 @@ class TenantRepositoryIT {
 
     @Test
     void derived_finder_returns_only_matching_rows() {
-        // Arrange — two tenants differing only by status (the derived-finder field).
+        /* Arrange — two tenants differing only by status (the derived-finder field). */
         var now = Instant.parse("2026-01-15T00:00:00Z");
         repository.save(new Tenant("ten_active", "Active Co", "ext-active", "ACTIVE", null, now));
         repository.save(new Tenant("ten_inactive", "Inactive Co", "ext-inactive", "INACTIVE", null, now));
 
-        // Act + Assert — findByStatus returns exactly the one matching row.
+        /* Act + Assert — findByStatus returns exactly the one matching row. */
         assertThat(repository.findByStatus("ACTIVE"))
                 .extracting(Tenant::getId)
                 .containsExactly("ten_active");

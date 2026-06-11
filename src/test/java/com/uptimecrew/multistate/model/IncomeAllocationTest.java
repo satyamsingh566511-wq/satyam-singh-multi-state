@@ -74,10 +74,10 @@ class IncomeAllocationTest {
 
     @ParameterizedTest(name = "rejects amount = {0}")
     @CsvSource({
-            "-0.01",        // smallest representable negative at scale 2 (boundary)
-            "-1.00",        // small negative
-            "-12500.00",    // sample-amount magnitude, negated
-            "-100000.00"    // large negative
+            "-0.01",        /* smallest representable negative at scale 2 (boundary) */
+            "-1.00",        /* small negative */
+            "-12500.00",    /* sample-amount magnitude, negated */
+            "-100000.00"    /* large negative */
     })
     void constructor_negativeAmount_throwsIllegalArgumentException(String amount) {
         assertThrows(IllegalArgumentException.class,

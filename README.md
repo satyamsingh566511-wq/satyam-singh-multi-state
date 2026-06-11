@@ -59,6 +59,8 @@ The allocation domain (model + strategies) is still a self-contained library,
 but as of Week 2 Day 3 it is wrapped in a bootable Spring Boot service
 (`Application.java`) exposing the Actuator `health` and `info` endpoints.
 
+As of Week 2 Day 5, the persistence stack is exercised end to end by `TenantPolyglotIT`, a `@SpringBootTest` that boots against real Postgres, Mongo, and Redis containers via Testcontainers to verify the write-through and Redis cache paths.
+
 ## Project layout
 
 Packages are domain-driven, rooted at `com.uptimecrew.multistate`:

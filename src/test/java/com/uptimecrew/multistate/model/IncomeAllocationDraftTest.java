@@ -1,4 +1,4 @@
-// path: src/test/java/com/uptimecrew/multistate/model/IncomeAllocationDraftTest.java
+/* path: src/test/java/com/uptimecrew/multistate/model/IncomeAllocationDraftTest.java */
 package com.uptimecrew.multistate.model;
 
 import java.math.BigDecimal;

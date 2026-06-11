@@ -54,8 +54,10 @@ class ApplicationContextLoadIT {
 
     @BeforeAll
     static void applySchema() throws Exception {
-        // createConnection("") retries until the container is reachable, absorbing
-        // the host port-forward startup race on VM-backed Docker (see TenantQueryIT).
+        /*
+         * createConnection("") retries until the container is reachable, absorbing
+         * the host port-forward startup race on VM-backed Docker (see TenantQueryIT).
+         */
         try (Connection conn = PG.createConnection("");
              Statement stmt = conn.createStatement()) {
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
@@ -67,16 +69,20 @@ class ApplicationContextLoadIT {
 
     @Test
     void context_loads_and_service_bean_is_wired() {
-        // The whole point of this test: prove the context boots and the
-        // @Service bean (with its @Primary strategy) is found and injected.
+        /*
+         * The whole point of this test: prove the context boots and the
+         * @Service bean (with its @Primary strategy) is found and injected.
+         */
         assertThat(service).isNotNull();
     }
 
     @Test
     void service_delegates_to_primary_strategy() {
-        // The @Primary strategy is DayCountAllocationStrategy: an even split by
-        // raw day count. One day in each of two jurisdictions over a $100,000
-        // total yields two equal $50,000.00 shares that reconcile to the total.
+        /*
+         * The @Primary strategy is DayCountAllocationStrategy: an even split by
+         * raw day count. One day in each of two jurisdictions over a $100,000
+         * total yields two equal $50,000.00 shares that reconcile to the total.
+         */
         var workerId = "wkr_alice";
         var allocatedFor = LocalDate.of(2025, 12, 31);
         var workDays = List.of(
@@ -95,7 +101,7 @@ class ApplicationContextLoadIT {
                 .extracting(IncomeAllocation::amount)
                 .allSatisfy(amount -> assertThat(amount).isEqualByComparingTo("50000.00"));
 
-        // The audit invariant: the per-jurisdiction shares sum back to the total.
+        /* The audit invariant: the per-jurisdiction shares sum back to the total. */
         BigDecimal sum = allocations.stream()
                 .map(IncomeAllocation::amount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);

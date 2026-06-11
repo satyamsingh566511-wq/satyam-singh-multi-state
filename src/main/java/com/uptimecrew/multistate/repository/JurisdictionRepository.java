@@ -10,11 +10,13 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface JurisdictionRepository extends JpaRepository<Jurisdiction, String> {
 
-    // (1) Derived query — Spring Data generates the JPQL from the method name.
+    /* (1) Derived query — Spring Data generates the JPQL from the method name. */
     List<Jurisdiction> findByKind(String kind);
 
-    // (2) Explicit @Query JPQL — a correlated subquery (rate above the table
-    //     average) that the derived-name convention can't express.
+    /*
+     * (2) Explicit @Query JPQL — a correlated subquery (rate above the table
+     *     average) that the derived-name convention can't express.
+     */
     @Query("SELECT j FROM Jurisdiction j WHERE j.topMarginalRate > "
             + "(SELECT AVG(j2.topMarginalRate) FROM Jurisdiction j2)")
     List<Jurisdiction> findWithAboveAverageRate();

@@ -2,6 +2,7 @@ package com.uptimecrew.multistate;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 /**
  * Spring Boot entry point for the multistate application.
@@ -17,6 +18,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * {@code com.uptimecrew.multistate.repository}.
  */
 @SpringBootApplication
+@EnableCaching                                          /* W2 D5: activate Spring's cache abstraction (Redis-backed @Cacheable) */
 public class Application {
 
     public static void main(String[] args) {
