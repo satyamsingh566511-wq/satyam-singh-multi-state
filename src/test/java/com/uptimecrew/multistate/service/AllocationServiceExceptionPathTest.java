@@ -1,4 +1,4 @@
-git restore --staged package com.uptimecrew.multistate.service;
+package com.uptimecrew.multistate.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
