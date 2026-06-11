@@ -10,6 +10,7 @@ import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Application-facing entry point for year-end income allocation. It owns no
@@ -40,6 +42,8 @@ import java.util.Objects;
 public class AllocationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(AllocationService.class);
+
+    static final String CACHE_NAME = "multistate.byId";
 
     private static final BigDecimal CENT = new BigDecimal("0.01");
 
@@ -117,6 +121,36 @@ public class AllocationService {
                 projection.getId(), projection.getPrimaryState());
 
         return reconciled;
+    }
+
+    /**
+     * Read path fronted by Redis: {@code @Cacheable} short-circuits on a cache hit
+     * before this body runs, so the INFO log below only fires on a miss. On a miss
+     * we read the denormalised Mongo read model first (one round-trip for the whole
+     * tree), falling back to a fresh projection rebuilt from the Postgres JPA entity
+     * so a Mongo wipe doesn't break the read path.
+     *
+     * <p>{@code unless = "#result == null"} keeps a {@code null}/empty result out of
+     * the cache. Spring evaluates the SpEL against the unwrapped {@link Optional}, so
+     * a present {@code Optional} is cached and an {@link Optional#empty()} (returned
+     * as {@code null} here) is not — a transient not-found never locks in.
+     */
+    @Cacheable(value = CACHE_NAME, unless = "#result == null")
+    public Optional<TenantReadModel> findById(String id) {
+        LOG.info("cache miss on id={}; reading from mongo", id);
+
+        Optional<TenantReadModel> fromMongo = readModelRepository.findById(id);
+        if (fromMongo.isPresent()) {
+            return fromMongo;
+        }
+
+        // Fallback: rebuild the read-model projection from the JPA entity. The
+        // entity's allocations are a LAZY @OneToMany not loaded outside a session,
+        // so the rebuilt projection carries primaryState (residency code) but no
+        // embedded allocations — the Mongo write-through is the authoritative copy.
+        return repository.findById(id)
+                .map(e -> new TenantReadModel(
+                        e.getId(), e.getResidencyJurisdictionCode(), Instant.now(), List.of()));
     }
 
     /**
