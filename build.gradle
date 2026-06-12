@@ -50,6 +50,9 @@ dependencies {
     // *-test artifact (versions managed by the Spring Boot BOM).
     testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
     testImplementation 'org.springframework.boot:spring-boot-jdbc-test'
+    // @AutoConfigureMockMvc moved here in the same Boot 4 modularisation — it is
+    // no longer carried by starter-test's spring-boot-test-autoconfigure.
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
 
     testImplementation platform('org.junit:junit-bom:5.10.2')
     testImplementation 'org.junit.jupiter:junit-jupiter'

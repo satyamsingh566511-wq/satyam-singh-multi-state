@@ -1,20 +1,12 @@
 package com.uptimecrew.multistate.security;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Stream;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -69,18 +61,8 @@ public class SecurityConfig {
      * combination of the two is what the controller's @PreAuthorize SpEL checks.
      */
     private JwtAuthenticationConverter jwtAuthenticationConverter() {
-        JwtGrantedAuthoritiesConverter scopes = new JwtGrantedAuthoritiesConverter();
-        scopes.setAuthorityPrefix("SCOPE_");
-        scopes.setAuthoritiesClaimName("scope");
-
         JwtAuthenticationConverter conv = new JwtAuthenticationConverter();
-        conv.setJwtGrantedAuthoritiesConverter((Jwt jwt) -> {
-            Collection<GrantedAuthority> scopeAuths = scopes.convert(jwt);
-            List<String> roles = jwt.getClaimAsStringList("roles");
-            Stream<GrantedAuthority> roleAuths = (roles == null ? Stream.<String>empty() : roles.stream())
-                .map(r -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + r));
-            return Stream.concat(scopeAuths.stream(), roleAuths).toList();
-        });
+        conv.setJwtGrantedAuthoritiesConverter(new JwtAuthoritiesConverter());
         return conv;
     }
 }
