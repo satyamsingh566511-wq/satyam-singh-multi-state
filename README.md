@@ -61,6 +61,8 @@ but as of Week 2 Day 3 it is wrapped in a bootable Spring Boot service
 
 As of Week 2 Day 5, the persistence stack is exercised end to end by `TenantPolyglotIT`, a `@SpringBootTest` that boots against real Postgres, Mongo, and Redis containers via Testcontainers to verify the write-through and Redis cache paths.
 
+As of Week 3 Day 1, the service is secured with Spring Security 7 as an OAuth2 Resource Server (JWT), with a `@PreAuthorize`-guarded tenant controller, a Bucket4j rate-limited LLM summary endpoint, and security tests covering mocked-JWT access and rate-limit exhaustion.
+
 ## Project layout
 
 Packages are domain-driven, rooted at `com.uptimecrew.multistate`:
