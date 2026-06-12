@@ -2,6 +2,7 @@ package com.uptimecrew.multistate.api;
 
 import com.uptimecrew.multistate.readmodel.TenantReadModel;
 import com.uptimecrew.multistate.service.AllocationService;
+import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,5 +44,20 @@ public class TenantController {
         Optional<TenantReadModel> found = service.findById(id);
         return found.map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /*
+     * Stubs an LLM-backed summary. Today is about the rate-limit plumbing
+     * (see RateLimitFilter), not the model — the sleep stands in for an LLM
+     * round-trip so the /api/**+/summary path actually exercises the meter.
+     * Gated by the same @PreAuthorize as getById.
+     */
+    @GetMapping("/{id}/summary")
+    @PreAuthorize("hasAuthority('SCOPE_tenants.read') and hasRole('TENANT_READER')")
+    public Map<String, String> summary(@PathVariable String id,
+                                        @AuthenticationPrincipal Jwt jwt) throws InterruptedException {
+        LOG.info("summary id={} subject={}", id, jwt.getSubject());
+        Thread.sleep(100);
+        return Map.of("summary", "Stub LLM summary for " + id);
     }
 }
