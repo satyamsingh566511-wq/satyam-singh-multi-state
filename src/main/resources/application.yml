@@ -31,6 +31,13 @@ spring:
     # Disable OSIV: no lazy-loading from the web layer; sessions stay bounded to
     # the transactional service layer.
     open-in-view: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+            # (1) Dummy IdP issuer for production wiring; tests override with a mock
+            #     JwkSource via spring-security-test so they don't need a real IdP.
+          issuer-uri: https://idp.example.internal/realms/uptimecrew
 
 management:
   endpoints:
@@ -45,6 +52,10 @@ logging:
   level:
     root: INFO
     com.uptimecrew.multistate: DEBUG     # turn up your own packages in local dev
+    # W3 D1: surface the SecurityFilterChain Spring Security builds at startup
+    # (and the request matchers it secures) so the resource-server wiring is
+    # observable in local logs.
+    org.springframework.security: DEBUG
 
 ---
 spring:
