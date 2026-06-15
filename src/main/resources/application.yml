@@ -38,6 +38,23 @@ spring:
             # (1) Dummy IdP issuer for production wiring; tests override with a mock
             #     JwkSource via spring-security-test so they don't need a real IdP.
           issuer-uri: https://idp.example.internal/realms/uptimecrew
+  identity:
+    base-url: http://localhost:8090     # (1) WireMock stub address used by the contract test
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      identity:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 3
 
 management:
   endpoints:
