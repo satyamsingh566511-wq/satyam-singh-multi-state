@@ -14,6 +14,7 @@ java {
     }
 }
 
+
 repositories {
     mavenCentral()
 }
@@ -24,6 +25,7 @@ dependencies {
     // Spring Boot 4 split the web stack into focused modules: the old
     // spring-boot-starter-web was renamed to spring-boot-starter-webmvc.
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly    'org.springframework.boot:spring-boot-starter-jdbc'
     runtimeOnly    'org.postgresql:postgresql:42.7.3'
@@ -80,6 +82,21 @@ dependencies {
     testImplementation 'org.testcontainers:mongodb'
     // Redis test uses the core GenericContainer with the redis:7-alpine image —
     // no extra Testcontainers module needed for simple use.
+    testImplementation 'com.h2database:h2'
+
+//    // Add to dependencies { ... } in build.gradle, alongside your W3 D1 lines.
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
+
+    // ── Direct Feign and Resilience4j (without Spring Cloud BOM) ─────────
+    // Using direct libraries instead of Spring Cloud starters to avoid
+    // classpath conflicts with Spring Boot 4.0.6.
+    implementation 'io.github.openfeign:feign-core:13.2'
+    implementation 'io.github.openfeign:feign-jackson:13.2'
+    implementation 'io.github.openfeign:feign-slf4j:13.2'
+    implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.1.0'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+
+    testImplementation 'org.wiremock:wiremock-standalone:3.9.1'
 }
 
 test {
