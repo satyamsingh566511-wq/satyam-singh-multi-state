@@ -1,5 +1,7 @@
 package com.uptimecrew.multistate.readmodel;
 
+import com.uptimecrew.multistate.consumer.AllocationCreatedEvent;
+import com.uptimecrew.multistate.model.IncomeAllocation;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -55,6 +57,29 @@ public class TenantReadModel implements Serializable {
     public String getPrimaryState()                { return primaryState; }
     public Instant getCapturedAt()                 { return capturedAt; }
     public List<EmbeddedAllocation> getAllocations() { return allocations; }
+
+    public void applyEvent(AllocationCreatedEvent event) {
+        Instant now = Instant.now();
+        for (IncomeAllocation allocation : event.allocations()) {
+            allocations.add(new EmbeddedAllocation(
+                    allocation.jurisdictionCode(),
+                    allocation.amount(),
+                    allocation.allocatedFor(),
+                    now));
+        }
+        updatePrimaryState();
+        this.capturedAt = now;
+    }
+
+    private void updatePrimaryState() {
+        if (allocations.isEmpty()) {
+            return;
+        }
+        primaryState = allocations.stream()
+                .max((a, b) -> a.getAmount().compareTo(b.getAmount()))
+                .map(EmbeddedAllocation::getJurisdictionCode)
+                .orElse(primaryState);
+    }
 
     /**
      * Denormalised copy of the JPA {@code Allocation} child — inlined into the
