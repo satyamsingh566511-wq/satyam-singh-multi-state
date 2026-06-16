@@ -76,6 +76,8 @@ class TenantPolyglotIT {
                      PG.getJdbcUrl(), PG.getUsername(), PG.getPassword());
              Statement stmt = conn.createStatement()) {
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
+            stmt.execute(Files.readString(Path.of("db/V2__seed.sql")));
+            stmt.execute(Files.readString(Path.of("db/V3__event_outbox.sql")));
         }
     }
 

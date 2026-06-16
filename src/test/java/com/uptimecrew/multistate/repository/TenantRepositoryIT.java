@@ -78,6 +78,8 @@ class TenantRepositoryIT {
         try (Connection conn = PG.createConnection("");
              Statement stmt = conn.createStatement()) {
             stmt.execute(Files.readString(Path.of("db/V1__schema.sql")));
+            stmt.execute(Files.readString(Path.of("db/V2__seed.sql")));
+            stmt.execute(Files.readString(Path.of("db/V3__event_outbox.sql")));
         }
     }
 

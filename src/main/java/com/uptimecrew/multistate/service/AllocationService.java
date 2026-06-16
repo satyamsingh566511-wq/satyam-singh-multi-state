@@ -4,6 +4,8 @@ import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.outbox.EventOutboxEntity;
+import com.uptimecrew.multistate.outbox.EventOutboxRepository;
 import com.uptimecrew.multistate.readmodel.TenantReadModel;
 import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
@@ -13,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -52,13 +55,19 @@ public class AllocationService {
     private final AllocationStrategy strategy;
     private final TenantRepository repository;
     private final TenantReadModelRepository readModelRepository;
+    private final EventOutboxRepository outboxRepository;
+    private final ObjectMapper objectMapper;
 
     public AllocationService(AllocationStrategy strategy,
                              TenantRepository repository,
-                             TenantReadModelRepository readModelRepository) {
+                             TenantReadModelRepository readModelRepository,
+                             EventOutboxRepository outboxRepository,
+                             ObjectMapper objectMapper) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
         this.repository = Objects.requireNonNull(repository, "repository");
         this.readModelRepository = Objects.requireNonNull(readModelRepository, "readModelRepository");
+        this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
     }
 
     /**
@@ -125,6 +134,17 @@ public class AllocationService {
         readModelRepository.save(projection);
         LOG.info("write-through to mongo id={} primaryState={}",
                 projection.getId(), projection.getPrimaryState());
+
+        /* Insert outbox entry for transactional event publishing. */
+        try {
+            String payload = objectMapper.writeValueAsString(reconciled);
+            EventOutboxEntity outboxEntry = new EventOutboxEntity(workerId, "tenants.events", payload);
+            outboxRepository.save(outboxEntry);
+            LOG.info("outbox entry created id={}", outboxEntry.getId());
+        } catch (Exception ex) {
+            LOG.warn("failed to create outbox entry for workerId={}: {}", workerId, ex.toString());
+            throw new RuntimeException("outbox creation failed", ex);
+        }
 
         return reconciled;
     }

@@ -18,8 +18,10 @@ import ch.qos.logback.core.read.ListAppender;
 import com.uptimecrew.multistate.exception.IncomeAllocationFailedException;
 import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.WorkDay;
+import com.uptimecrew.multistate.outbox.EventOutboxRepository;
 import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -35,6 +39,7 @@ import org.slf4j.LoggerFactory;
  * cause, and emit a single WARN log line carrying the exception message.
  */
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AllocationServiceExceptionPathTest {
 
     private static final String WORKER_ID = "wkr_001";
@@ -52,15 +57,22 @@ class AllocationServiceExceptionPathTest {
     @Mock
     TenantReadModelRepository readModelRepository;
 
+    @Mock
+    EventOutboxRepository outboxRepository;
+
+    @Mock
+    ObjectMapper objectMapper;
+
     private Logger logbackLogger;
     private ListAppender<ILoggingEvent> appender;
 
     @BeforeEach
-    void attachAppender() {
+    void attachAppender() throws Exception {
         logbackLogger = (Logger) LoggerFactory.getLogger(AllocationService.class);
         appender = new ListAppender<>();
         appender.start();
         logbackLogger.addAppender(appender);
+        when(objectMapper.writeValueAsString(any())).thenReturn("[]");
     }
 
     @AfterEach
@@ -73,7 +85,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class)
@@ -87,7 +99,7 @@ class AllocationServiceExceptionPathTest {
                 new IOException("synthetic cause"));
         when(strategy.allocate(any(), any(), any(), any())).thenThrow(failure);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(IncomeAllocationFailedException.class)
@@ -101,7 +113,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class);
