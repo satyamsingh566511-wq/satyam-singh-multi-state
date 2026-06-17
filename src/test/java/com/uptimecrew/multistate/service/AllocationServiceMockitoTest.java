@@ -16,6 +16,7 @@ import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 import com.uptimecrew.multistate.outbox.EventOutboxRepository;
 import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
+import com.uptimecrew.multistate.repository.AllocationRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -47,6 +48,9 @@ class AllocationServiceMockitoTest {
     EventOutboxRepository outboxRepository;
 
     @Mock
+    AllocationRepository allocationRepository;
+
+    @Mock
     ObjectMapper objectMapper;
 
     @BeforeEach
@@ -76,7 +80,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(stubbed);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR);
 
         /*
@@ -94,7 +98,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(List.of());
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR);
 
         verify(strategy, times(1)).allocate(eq(WORKER_ID), eq(TOTAL_INCOME), eq(WORK_DAYS), eq(ALLOCATED_FOR));
@@ -120,7 +124,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(understated);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
         /* Original list order is preserved; only the largest line absorbs the cent. */
@@ -148,7 +152,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(overstated);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
         assertEquals(new BigDecimal("49.99"), result.get(0).amount());
@@ -175,7 +179,7 @@ class AllocationServiceMockitoTest {
         when(strategy.allocate(eq(WORKER_ID), eq(total), eq(WORK_DAYS), eq(ALLOCATED_FOR)))
                 .thenReturn(shortfall);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
         List<IncomeAllocation> result = subject.allocate(WORKER_ID, total, WORK_DAYS, ALLOCATED_FOR);
 
         assertEquals(new BigDecimal("33.34"), result.get(0).amount());

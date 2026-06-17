@@ -2,6 +2,7 @@ package com.uptimecrew.multistate.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,7 +31,27 @@ public class SecurityConfig {
         this.rateLimitFilter = rateLimitFilter;
     }
 
+    /*
+     * (0) GraphQL chain, ordered FIRST. The in-browser GraphiQL UI and the
+     *     /graphql transport are unauthenticated smoke-test surfaces, so this
+     *     chain matches only those paths and permits them WITHOUT the bearer-token
+     *     resource-server filter — otherwise every GraphQL request 401s before a
+     *     resolver runs. Everything else falls through to apiSecurity.
+     */
     @Bean
+    @Order(1)
+    SecurityFilterChain graphqlSecurity(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/graphql", "/graphiql/**", "/graphql/schema")
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
     SecurityFilterChain apiSecurity(HttpSecurity http) throws Exception {
         http
             /*

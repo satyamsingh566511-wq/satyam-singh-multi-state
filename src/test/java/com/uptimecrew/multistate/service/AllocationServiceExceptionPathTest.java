@@ -20,6 +20,7 @@ import com.uptimecrew.multistate.exception.JurisdictionUnsupportedException;
 import com.uptimecrew.multistate.model.WorkDay;
 import com.uptimecrew.multistate.outbox.EventOutboxRepository;
 import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
+import com.uptimecrew.multistate.repository.AllocationRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -61,6 +62,9 @@ class AllocationServiceExceptionPathTest {
     EventOutboxRepository outboxRepository;
 
     @Mock
+    AllocationRepository allocationRepository;
+
+    @Mock
     ObjectMapper objectMapper;
 
     private Logger logbackLogger;
@@ -85,7 +89,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class)
@@ -99,7 +103,7 @@ class AllocationServiceExceptionPathTest {
                 new IOException("synthetic cause"));
         when(strategy.allocate(any(), any(), any(), any())).thenThrow(failure);
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(IncomeAllocationFailedException.class)
@@ -113,7 +117,7 @@ class AllocationServiceExceptionPathTest {
         when(strategy.allocate(any(), any(), any(), any()))
                 .thenThrow(new JurisdictionUnsupportedException("jurisdiction not supported: ZZ"));
 
-        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, objectMapper);
+        AllocationService subject = new AllocationService(strategy, repository, readModelRepository, outboxRepository, allocationRepository, objectMapper);
 
         assertThatThrownBy(() -> subject.allocate(WORKER_ID, TOTAL_INCOME, WORK_DAYS, ALLOCATED_FOR))
                 .isInstanceOf(JurisdictionUnsupportedException.class);
