@@ -59,6 +59,9 @@ class TenantQueryIT {
                     throw expected; /* 23514 = check_violation; anything else is real */
                 }
             }
+
+            /* V3 creates the event_outbox table for transactional event publishing. */
+            stmt.execute(Files.readString(Path.of("db/V3__event_outbox.sql")));
         }
     }
 

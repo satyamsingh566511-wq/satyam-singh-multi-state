@@ -21,6 +21,9 @@ spring:
     redis:
       time-to-live: 60000                             # (3) 60s TTL — short enough to bound staleness
       cache-null-values: false                        # (4) don't cache "not found"
+  flyway:
+    locations: classpath:db/migration
+    enabled: true
   jpa:
     hibernate:
       # validate (not none): compare every entity mapping to the live schema at
@@ -40,6 +43,33 @@ spring:
           issuer-uri: https://idp.example.internal/realms/uptimecrew
   identity:
     base-url: http://localhost:8090     # (1) WireMock stub address used by the contract test
+  kafka:
+    bootstrap-servers: localhost:9092         # (1) overridden by @ServiceConnection in tests
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: multistate-read-model-builder
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.trusted.packages: '*'
+    listener:
+      ack-mode: RECORD
+  ai:
+    mcp:
+      server:
+        name: multistate-mcp
+        version: 1.0.0
+        type: SYNC
+        transport: SSE
 
 springdoc:
   api-docs:
