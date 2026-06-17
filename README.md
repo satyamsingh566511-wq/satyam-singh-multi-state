@@ -63,6 +63,8 @@ As of Week 2 Day 5, the persistence stack is exercised end to end by `TenantPoly
 
 As of Week 3 Day 1, the service is secured with Spring Security 7 as an OAuth2 Resource Server (JWT), with a `@PreAuthorize`-guarded tenant controller, a Bucket4j rate-limited LLM summary endpoint, and security tests covering mocked-JWT access and rate-limit exhaustion.
 
+As of Week 3 Day 3, the service implements the transactional outbox pattern with a Kafka consumer that projects domain events into a Mongo read model. The outbox query uses pessimistic locking (`FOR UPDATE SKIP LOCKED`) to prevent duplicate publishing, and the consumer is idempotent — replayed events overwrite allocations at the same (jurisdictionCode, allocatedFor) coordinates rather than duplicating them.
+
 ## Project layout
 
 Packages are domain-driven, rooted at `com.uptimecrew.multistate`:

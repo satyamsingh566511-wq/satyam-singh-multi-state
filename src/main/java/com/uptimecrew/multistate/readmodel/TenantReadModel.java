@@ -61,11 +61,24 @@ public class TenantReadModel implements Serializable {
     public void applyEvent(AllocationCreatedEvent event) {
         Instant now = Instant.now();
         for (IncomeAllocation allocation : event.allocations()) {
-            allocations.add(new EmbeddedAllocation(
+            EmbeddedAllocation incoming = new EmbeddedAllocation(
                     allocation.jurisdictionCode(),
                     allocation.amount(),
                     allocation.allocatedFor(),
-                    now));
+                    now);
+            boolean found = false;
+            for (int i = 0; i < allocations.size(); i++) {
+                EmbeddedAllocation existing = allocations.get(i);
+                if (existing.getJurisdictionCode().equals(allocation.jurisdictionCode())
+                        && existing.getAllocatedFor().equals(allocation.allocatedFor())) {
+                    allocations.set(i, incoming);
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                allocations.add(incoming);
+            }
         }
         updatePrimaryState();
         this.capturedAt = now;

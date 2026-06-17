@@ -10,9 +10,10 @@ import org.springframework.stereotype.Repository;
 public interface EventOutboxRepository extends JpaRepository<EventOutboxEntity, java.util.UUID> {
 
     @Query(value = """
-            SELECT e FROM EventOutboxEntity e
-            WHERE e.publishedAt IS NULL
-            ORDER BY e.occurredAt ASC
-            """)
+            SELECT * FROM multistate.event_outbox
+            WHERE published_at IS NULL
+            ORDER BY occurred_at ASC
+            FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
     List<EventOutboxEntity> findUnpublishedForUpdate(Pageable pageable);
 }
