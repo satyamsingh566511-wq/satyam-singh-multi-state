@@ -5,3 +5,4 @@ out/
 .vscode/
 *.iml
 .DS_Store
+bin

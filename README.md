@@ -65,6 +65,8 @@ As of Week 3 Day 1, the service is secured with Spring Security 7 as an OAuth2 R
 
 As of Week 3 Day 3, the service implements the transactional outbox pattern with a Kafka consumer that projects domain events into a Mongo read model. The outbox query uses pessimistic locking (`FOR UPDATE SKIP LOCKED`) to prevent duplicate publishing, and the consumer is idempotent — replayed events overwrite allocations at the same (jurisdictionCode, allocatedFor) coordinates rather than duplicating them.
 
+As of Week 3 Day 4, the read model is exposed over GraphQL via Spring for GraphQL (`schema.graphqls`): a `TenantGraphQlController` wires `tenant(id)` and `latestTenants(limit)` queries plus a `summarizeTenant(id)` mutation. The `tenant.lines` field is resolved with an `@BatchMapping` that loads every parent's line items in a single `WHERE tenant_id IN (...)` query, eliminating the N+1. The mutation produces an LLM `TenantSummary` through Spring AI structured-output binding (`.entity(TenantSummary.class)`), then re-validates it against a hand-written JSON Schema (`schemas/TenantSummary.schema.json`) so a drifting model payload fails loudly instead of shipping a malformed summary. `TenantGraphQlIT` exercises all three legs against real Postgres, Mongo, and Redis containers with `@AutoConfigureGraphQlTester`.
+
 ## Project layout
 
 Packages are domain-driven, rooted at `com.uptimecrew.multistate`:

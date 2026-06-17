@@ -105,6 +105,22 @@ dependencies {
     implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
 
     testImplementation 'org.wiremock:wiremock-standalone:3.9.1'
+
+    implementation 'org.springframework.boot:spring-boot-starter-graphql'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'   // for the GraphiQL UI only
+    implementation 'com.networknt:json-schema-validator:1.5.1'
+
+    // W3 D4 Task 3: Spring AI Anthropic chat model — provides the autoconfigured
+    // ChatModel + ChatClient.Builder that LlmSummaryService binds the structured
+    // TenantSummary output to (.entity(TenantSummary.class)). Configured via
+    // spring.ai.anthropic.* in application.yml.
+    implementation 'org.springframework.ai:spring-ai-starter-model-anthropic:2.0.0'
+
+    testImplementation 'org.springframework.graphql:spring-graphql-test'
+    // Spring Boot 4 modularised the test slices: @AutoConfigureGraphQlTester is no
+    // longer carried by starter-test's spring-boot-test-autoconfigure — it ships in
+    // the per-technology spring-boot-graphql-test artifact (version from the BOM).
+    testImplementation 'org.springframework.boot:spring-boot-graphql-test'
 }
 
 test {
