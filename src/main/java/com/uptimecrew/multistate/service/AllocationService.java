@@ -1,18 +1,22 @@
 package com.uptimecrew.multistate.service;
 
+import com.uptimecrew.multistate.entity.Allocation;
 import com.uptimecrew.multistate.entity.Tenant;
 import com.uptimecrew.multistate.exception.AllocationException;
+import com.uptimecrew.multistate.graphql.LineItem;
 import com.uptimecrew.multistate.model.IncomeAllocation;
 import com.uptimecrew.multistate.model.WorkDay;
 import com.uptimecrew.multistate.outbox.EventOutboxEntity;
 import com.uptimecrew.multistate.outbox.EventOutboxRepository;
 import com.uptimecrew.multistate.readmodel.TenantReadModel;
 import com.uptimecrew.multistate.readmodel.TenantReadModelRepository;
+import com.uptimecrew.multistate.repository.AllocationRepository;
 import com.uptimecrew.multistate.repository.TenantRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,7 +26,9 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -56,17 +62,20 @@ public class AllocationService {
     private final TenantRepository repository;
     private final TenantReadModelRepository readModelRepository;
     private final EventOutboxRepository outboxRepository;
+    private final AllocationRepository allocationRepository;
     private final ObjectMapper objectMapper;
 
     public AllocationService(AllocationStrategy strategy,
                              TenantRepository repository,
                              TenantReadModelRepository readModelRepository,
                              EventOutboxRepository outboxRepository,
+                             AllocationRepository allocationRepository,
                              ObjectMapper objectMapper) {
         this.strategy = Objects.requireNonNull(strategy, "strategy");
         this.repository = Objects.requireNonNull(repository, "repository");
         this.readModelRepository = Objects.requireNonNull(readModelRepository, "readModelRepository");
         this.outboxRepository = Objects.requireNonNull(outboxRepository, "outboxRepository");
+        this.allocationRepository = Objects.requireNonNull(allocationRepository, "allocationRepository");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper");
     }
 
@@ -294,6 +303,56 @@ public class AllocationService {
                         original.jurisdictionCode(),
                         amounts[i],
                         original.allocatedFor()));
+            }
+        }
+        return result;
+    }
+
+    /** Most-recently-projected tenants, capped at {@code limit}, for the GraphQL latestTenants query. */
+    public List<TenantReadModel> findLatest(int limit) {
+        return readModelRepository.findAll(PageRequest.of(0, limit)).getContent();
+    }
+
+    /**
+     * Batch loader behind the GraphQL {@code tenant.lines} {@code @BatchMapping}.
+     * Given every parent tenant in a single generation, it issues ONE
+     * {@code WHERE tenant_id IN (...)} SELECT for all their line items and groups
+     * the rows back under their owning parent — the fix for the classic N+1 where
+     * resolving {@code lines} on N tenants would otherwise fire N separate SELECTs.
+     *
+     * <p>The returned map is keyed by the parent {@link TenantReadModel} object
+     * itself (not its id): Spring for GraphQL matches each source object against
+     * this map by identity to resolve its {@code lines} field. Every parent gets an
+     * entry — empty list when it has no line items — so the non-null
+     * {@code [LineItem!]!} schema contract always holds.
+     *
+     * <p>{@code @Transactional(readOnly = true)}: open-in-view is disabled, so the
+     * read must run inside a transaction for the query to execute; only the FK id
+     * ({@code allocation.getTenant().getId()}) is touched, which the LAZY proxy
+     * answers without a second select.
+     */
+    @Transactional(readOnly = true)
+    public Map<TenantReadModel, List<LineItem>> loadLineItemsByParent(List<TenantReadModel> parents) {
+        Map<String, TenantReadModel> parentsById = new HashMap<>();
+        for (TenantReadModel parent : parents) {
+            parentsById.put(parent.getId(), parent);
+        }
+
+        Map<TenantReadModel, List<LineItem>> result = new HashMap<>();
+        for (TenantReadModel parent : parents) {
+            result.put(parent, new ArrayList<>());
+        }
+
+        /* ONE SELECT for the whole generation of parents. */
+        List<Allocation> rows = allocationRepository.findByTenant_IdIn(parentsById.keySet());
+        LOG.info("graphql @BatchMapping lines: {} parents -> {} line items in one query",
+                parents.size(), rows.size());
+
+        for (Allocation a : rows) {
+            TenantReadModel parent = parentsById.get(a.getTenant().getId());
+            if (parent != null) {
+                result.get(parent).add(new LineItem(
+                        a.getId(), a.getJurisdictionCode(), a.getAmount().floatValue()));
             }
         }
         return result;

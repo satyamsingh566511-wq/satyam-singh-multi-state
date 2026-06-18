@@ -3,6 +3,9 @@ spring:
     name: multistate-service
   profiles:
     default: local
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.mcp.server.common.autoconfigure.McpServerAutoConfiguration
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres
     username: postgres
@@ -11,7 +14,9 @@ spring:
       maximum-pool-size: 5
   data:
     mongodb:
-      uri: mongodb://localhost:27017/multistate      # (1) placeholder; tests inject via @ServiceConnection
+      # Local dev points at an auth-less Mongo on 27017; tests override this via
+      # @ServiceConnection (container) or application-test.yml.
+      uri: mongodb://localhost:27017/statetrack
       auto-index-creation: true                      # (2) create @Indexed indexes on startup
     redis:
       host: localhost
@@ -64,12 +69,24 @@ spring:
     listener:
       ack-mode: RECORD
   ai:
-    mcp:
-      server:
-        name: multistate-mcp
-        version: 1.0.0
-        type: SYNC
-        transport: SSE
+    # mcp disabled for local dev due to missing dependency
+    #mcp:
+    #  server:
+    #    name: multistate-mcp
+    #    version: 1.0.0
+    #    type: SYNC
+    #    transport: SSE
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:dummy}
+      chat:
+        options:
+          model: claude-sonnet-4-5
+          max-tokens: 1024
+  graphql:
+    graphiql:
+      enabled: true
+    web:
+      path: /graphql
 
 springdoc:
   api-docs:
@@ -103,6 +120,10 @@ logging:
     # (and the request matchers it secures) so the resource-server wiring is
     # observable in local logs.
     org.springframework.security: DEBUG
+    # W3 D4: log the SQL Hibernate emits so the GraphQL tenant.lines @BatchMapping
+    # can be confirmed to issue ONE `where tenant_id in (...)` SELECT per generation
+    # rather than N per-parent selects.
+    org.hibernate.SQL: DEBUG
 
 ---
 spring:

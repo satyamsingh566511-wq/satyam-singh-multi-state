@@ -38,14 +38,22 @@ INSERT INTO multistate.allocation (id, tenant_id, jurisdiction_code, amount, all
 COMMIT;
 
 -- ---------------------------------------------------------------------------
--- Intentional failure test — runs in its OWN transaction, OUTSIDE the seed
--- above, and always ROLLBACKs so it leaves no data behind. It proves the
--- amount >= 0 CHECK (allocation_amount_check) rejects negative income.
+-- Intentional failure test — proves the amount >= 0 CHECK
+-- (allocation_amount_check) rejects negative income, and leaves no data behind.
+--
+-- Wrapped in a DO block that traps the check_violation: a bare
+-- `INSERT ... -1.00` raises an error that aborts the whole script when this file
+-- is executed as a single JDBC batch (every Testcontainers IT applies it that
+-- way via Statement.execute(Files.readString(...))). Catching the violation here
+-- keeps the demonstration — the constraint still fires and is asserted — without
+-- propagating a fatal error to the JDBC driver. Nothing is committed.
 -- ---------------------------------------------------------------------------
-BEGIN;
-INSERT INTO multistate.allocation (id, tenant_id, jurisdiction_code, amount, allocated_for) VALUES
-    ('doc-2026-9999', 'tenant-a', 'US-CA', -1.00, DATE '2025-12-31');
-ROLLBACK;
--- Expected rejection (captured from psql):
---   ERROR:  new row for relation "allocation" violates check constraint "allocation_amount_check"
---   DETAIL:  Failing row contains (doc-2026-9999, tenant-a, US-CA, -1.00, 2025-12-31, <created_at>).
+DO $$
+BEGIN
+    INSERT INTO multistate.allocation (id, tenant_id, jurisdiction_code, amount, allocated_for)
+        VALUES ('doc-2026-9999', 'tenant-a', 'US-CA', -1.00, DATE '2025-12-31');
+    RAISE EXCEPTION 'allocation_amount_check did NOT reject a negative amount';
+EXCEPTION
+    WHEN check_violation THEN
+        RAISE NOTICE 'allocation_amount_check correctly rejected negative amount -1.00';
+END $$;
