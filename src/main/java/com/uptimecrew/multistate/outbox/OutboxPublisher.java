@@ -29,7 +29,13 @@ public class OutboxPublisher {
         this.kafkaTemplate = Optional.ofNullable(kafkaTemplate);
     }
 
-    @Scheduled(fixedDelay = 1000L)
+    // Delay is property-driven (defaults preserve the original fixed 1s sweep). Integration
+    // tests that assert "exactly one trace id covers all emitted spans" set both to a large
+    // value so the background sweep stays dormant and the test can drive ONE publish under a
+    // known parent span — otherwise the 1s sweep keeps flooding the exporter with empty-poll
+    // traces and the single-trace assertion can never hold.
+    @Scheduled(fixedDelayString = "${outbox.publisher.fixed-delay-ms:1000}",
+               initialDelayString = "${outbox.publisher.initial-delay-ms:0}")
     @Transactional
     public void publishPending() {
         if (kafkaTemplate.isEmpty()) {
