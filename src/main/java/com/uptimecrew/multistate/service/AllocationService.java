@@ -313,6 +313,11 @@ public class AllocationService {
         return readModelRepository.findAll(PageRequest.of(0, limit)).getContent();
     }
 
+    /** Every tenant carrying {@code tag}, for the GraphQL tenantsByTag query. */
+    public List<TenantReadModel> tenantsByTag(String tag) {
+        return readModelRepository.findByTagsContaining(tag);
+    }
+
     /**
      * Batch loader behind the GraphQL {@code tenant.lines} {@code @BatchMapping}.
      * Given every parent tenant in a single generation, it issues ONE

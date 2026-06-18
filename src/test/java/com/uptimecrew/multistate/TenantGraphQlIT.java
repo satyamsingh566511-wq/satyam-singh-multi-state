@@ -139,6 +139,21 @@ class TenantGraphQlIT {
         }
     }
 
+    @Test
+    void tenantsByTag_returnsOnlyTenantsCarryingTheTag() {
+        // The seeded-id-* docs carry empty tags; add two extra docs with distinct tags so the
+        // query must filter on the Mongo `tags` array rather than returning everything.
+        readModelRepository.save(
+                new TenantReadModel("tag-vip", "US-CA", Instant.now(), List.of(), List.of("vip", "emea")));
+        readModelRepository.save(
+                new TenantReadModel("tag-smb", "US-NY", Instant.now(), List.of(), List.of("smb")));
+
+        graphQlTester.document("query { tenantsByTag(tag: \"vip\") { id tags } }")
+                .execute()
+                .path("tenantsByTag").entityList(Object.class).hasSize(1)
+                .path("tenantsByTag[0].id").entity(String.class).isEqualTo("tag-vip");
+    }
+
     /**
      * Stubs {@link ChatClient.Builder} so the mutation returns a fixed, schema-valid
      * {@link TenantSummary} without calling Anthropic. {@code @Primary} wins over the

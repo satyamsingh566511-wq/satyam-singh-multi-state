@@ -13,4 +13,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 public interface TenantReadModelRepository extends MongoRepository<TenantReadModel, String> {
 
     List<TenantReadModel> findByPrimaryState(String primaryState);
+
+    /* Derived query: every tenant whose tags array contains the given tag. */
+    List<TenantReadModel> findByTagsContaining(String tag);
 }
