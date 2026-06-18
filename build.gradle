@@ -55,7 +55,16 @@ dependencies {
     implementation 'com.bucket4j:bucket4j-redis:8.10.1'     // reuses the W2 D5 Redis as the distributed bucket store
 
     testImplementation 'org.springframework.security:spring-security-test'
-    implementation 'org.springframework.kafka:spring-kafka'
+    // Spring Boot 4 modularised Kafka auto-configuration out of the always-present
+    // spring-boot-autoconfigure into the dedicated spring-boot-kafka module. The bare
+    // spring-kafka library only carries KafkaTemplate/@KafkaListener etc. — NOT the
+    // Boot auto-config that reads spring.kafka.* and creates ProducerFactory /
+    // KafkaTemplate / ConsumerFactory beans. Without this starter those beans never
+    // exist under bootRun (OutboxPublisher's @Autowired(required=false) KafkaTemplate
+    // stays null and the poll early-returns). The starter also auto-detects a single
+    // ProducerListener bean and attaches it to the auto-configured KafkaTemplate —
+    // which is how TraceparentLoggingProducerListener gets wired for Task 2.
+    implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc:2.0.0'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.testcontainers:kafka:1.20.4'
