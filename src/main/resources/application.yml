@@ -87,6 +87,20 @@ spring:
       enabled: true
     web:
       path: /graphql
+  otel:
+    service:
+      name: multistate-service
+    exporter:
+      otlp:
+        endpoint: http://localhost:4318     # OTLP/HTTP default; matches `docker run` below
+        protocol: http/protobuf
+    traces:
+      sampler: always_on                    # dev default; flip to parentbased_traceidratio in prod
+    instrumentation:
+      spring-kafka:
+        enabled: true
+      kafka:
+        enabled: true
 
 springdoc:
   api-docs:

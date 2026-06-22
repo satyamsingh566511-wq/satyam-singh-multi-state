@@ -37,6 +37,12 @@ public class TenantGraphQlController {
         return service.findLatest(limit == null ? 10 : limit);
     }
 
+    @QueryMapping
+    public List<TenantReadModel> tenantsByTag(@Argument String tag) {
+        LOG.info("graphql query tenantsByTag tag={}", tag);
+        return service.tenantsByTag(tag);
+    }
+
     @MutationMapping
     public TenantSummary summarizeTenant(@Argument String id) {
         LOG.info("graphql mutation summarizeTenant id={}", id);

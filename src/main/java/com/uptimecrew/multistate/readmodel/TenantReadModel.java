@@ -41,22 +41,46 @@ public class TenantReadModel implements Serializable {
 
     private List<EmbeddedAllocation> allocations = new ArrayList<>();   /* embedded, NOT a foreign reference */
 
+    @Indexed                                        /* secondary index — index-backed lookup by tag */
+    private List<String> tags = new ArrayList<>();  /* persisted free-form labels; never null */
+
     public TenantReadModel() {}                     /* required by Spring Data Mongo */
 
+    /*
+     * Backward-compatible 4-arg constructor: KEEPS its exact signature and
+     * behaviour for the many existing callers/tests that depend on it. Tags
+     * default to an empty list — never null.
+     */
     public TenantReadModel(String id,
                            String primaryState,
                            Instant capturedAt,
                            List<EmbeddedAllocation> allocations) {
+        this(id, primaryState, capturedAt, allocations, List.of());
+    }
+
+    /* 5-arg constructor for callers that supply tags. */
+    public TenantReadModel(String id,
+                           String primaryState,
+                           Instant capturedAt,
+                           List<EmbeddedAllocation> allocations,
+                           List<String> tags) {
         this.id = id;
         this.primaryState = primaryState;
         this.capturedAt = capturedAt;
         this.allocations = allocations != null ? allocations : new ArrayList<>();
+        // Defensive copy: this read model is cached and Redis-serialized, and CLAUDE.md
+        // prizes immutable value types — don't let a caller's mutable list become our backing
+        // store (which could desync the cache and corrupt tag lookups).
+        this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
     }
 
     public String getId()                          { return id; }
     public String getPrimaryState()                { return primaryState; }
     public Instant getCapturedAt()                 { return capturedAt; }
     public List<EmbeddedAllocation> getAllocations() { return allocations; }
+
+    /* Non-null [String!]! GraphQL field — return an unmodifiable view, never null. */
+    public List<String> getTags()                  { return tags != null ? List.copyOf(tags) : List.of(); }
 
     public void applyEvent(AllocationCreatedEvent event) {
         Instant now = Instant.now();

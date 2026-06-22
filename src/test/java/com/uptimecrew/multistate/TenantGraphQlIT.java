@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.graphql.test.autoconfigure.tester.AutoConfigureGraphQlTester;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -138,6 +139,21 @@ class TenantGraphQlIT {
         }
     }
 
+    @Test
+    void tenantsByTag_returnsOnlyTenantsCarryingTheTag() {
+        // The seeded-id-* docs carry empty tags; add two extra docs with distinct tags so the
+        // query must filter on the Mongo `tags` array rather than returning everything.
+        readModelRepository.save(
+                new TenantReadModel("tag-vip", "US-CA", Instant.now(), List.of(), List.of("vip", "emea")));
+        readModelRepository.save(
+                new TenantReadModel("tag-smb", "US-NY", Instant.now(), List.of(), List.of("smb")));
+
+        graphQlTester.document("query { tenantsByTag(tag: \"vip\") { id tags } }")
+                .execute()
+                .path("tenantsByTag").entityList(Object.class).hasSize(1)
+                .path("tenantsByTag[0].id").entity(String.class).isEqualTo("tag-vip");
+    }
+
     /**
      * Stubs {@link ChatClient.Builder} so the mutation returns a fixed, schema-valid
      * {@link TenantSummary} without calling Anthropic. {@code @Primary} wins over the
@@ -153,9 +169,16 @@ class TenantGraphQlIT {
             ChatClient client = mock(ChatClient.class, RETURNS_DEEP_STUBS);
             when(builder.build()).thenReturn(client);
 
-            TenantSummary deterministic = new TenantSummary("CA", 125000.0, 2, "GREEN");
-            when(client.prompt().user(anyString()).call().entity(TenantSummary.class))
-                    .thenReturn(deterministic);
+            // LlmSummaryService now reads the raw ChatResponse (to record llm.tokens.* on the
+            // manual span) and parses the entity itself, so stub .chatResponse() — not the old
+            // .entity(...) — with schema-valid JSON text plus non-null token usage.
+            ChatResponse chatResponse = mock(ChatResponse.class, RETURNS_DEEP_STUBS);
+            when(chatResponse.getResult().getOutput().getText()).thenReturn(
+                    "{\"primaryState\":\"CA\",\"totalAllocation\":125000.0,"
+                            + "\"stateCount\":2,\"complianceTier\":\"GREEN\"}");
+            when(chatResponse.getMetadata().getUsage().getPromptTokens()).thenReturn(11);
+            when(chatResponse.getMetadata().getUsage().getCompletionTokens()).thenReturn(7);
+            when(client.prompt().user(anyString()).call().chatResponse()).thenReturn(chatResponse);
             return builder;
         }
     }
