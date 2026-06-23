@@ -6,15 +6,23 @@ repo root; see the [root README](../README.md) for that side.
 
 ## What's here
 
-- A `TenantDetailPage` that loads tenant data through the `useTenant` hook and
-  demonstrates **lifted state**: the page owns a `threshold` value that a
-  controlled `ThresholdSlider` mutates and a sibling `ThresholdReadout` reads —
-  two siblings, one source of truth.
+- A `TenantDetailPage` driven by a **`useReducer` state machine**
+  (`idle → loading → success | empty | error`) with a `never` exhaustiveness
+  check on the action union, so each render branch is narrowed by TypeScript.
+- A **Zustand filter store** (`useTenantFilterStore`) with `devtools` + `persist`
+  middleware. Each `FilterStrip` control subscribes to only its own slice, and
+  `partialize` persists *only* `threshold` to `localStorage` — search and chips
+  are session-only by design.
+- A **`useDebouncedSearch`** hook that lags the store's search text by 300ms and
+  clears its timer on every keystroke and on unmount.
+- An **`ErrorBoundary`** wrapping the route with a render-prop fallback and a
+  retry that re-mounts the subtree (exercised by a DEV-only "Trigger error"
+  button that throws during render).
 - A hand-rolled hash router (`App.tsx`) that matches a single route off
   `window.location.hash`. TanStack Router lands on W4 D3; until then this keeps
   the dev server deep-linkable with no router dependency.
-- Strict TypeScript + ESLint 9 + a Vitest smoke test, all run in CI by a GitHub
-  Action.
+- Strict TypeScript + ESLint 9 + Vitest unit tests (reducer, store, debounce
+  hook), all run in CI by a GitHub Action.
 
 ## Run it
 
