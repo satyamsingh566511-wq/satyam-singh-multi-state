@@ -69,6 +69,16 @@ As of Week 3 Day 4, the read model is exposed over GraphQL via Spring for GraphQ
 
 As of Week 3 Day 5, the service is instrumented for distributed tracing with OpenTelemetry. The `opentelemetry-spring-boot-starter` auto-instruments HTTP, JDBC, and the scheduled outbox poll, exporting OTLP/HTTP to a Jaeger collector; the `opentelemetry-spring-kafka-2.7` instrumentation propagates the W3C `traceparent` header so a Kafka producer span and its consumer span share one trace id (a `TraceparentLoggingProducerListener` under `kafka/` logs the outgoing header as a no-Jaeger smoke check). `LlmSummaryService` wraps the Spring AI `ChatClient` call in a manual `llm.summarize` CLIENT span carrying `llm.model`, `llm.input.aggregate_id`, and `llm.tokens.in`/`llm.tokens.out` cost attributes (set after the call returns but before `span.end()`, with `recordException` + `ERROR` status on failure). `TenantObservabilityIT` proves trace continuity in-process: it overrides the `OpenTelemetry` bean with an SDK whose only exporter is an `InMemorySpanExporter` (via `SimpleSpanProcessor`, so finished spans are readable immediately) and asserts — against five Testcontainers (Postgres, Mongo, Redis, Kafka, and Jaeger as a `GenericContainer`) — that an HTTP request emits a server span with a JDBC child, that the outbox → Kafka → consumer → Mongo chain rides a single trace id, and that the `llm.summarize` span carries its token attributes. A small `tags: [String!]!` field and `tenantsByTag(tag)` query were shipped through a three-agent workflow (generator → tester → reviewer). OpenTelemetry is pinned to `2.28.1` / `2.28.1-alpha` (core `1.62.0`) — the minimum compatible with Spring Boot 4.0.6, since the `2.10.0` line references a Boot 3 Kafka class removed in Boot 4.
 
+As of Week 4 Day 1, the repo also contains `multistate-web/`, a Vite + React 19 + TypeScript front end (the first UI for the tracker). It renders a tenant detail page that reads tenant data through a `useTenant` hook and demonstrates lifted state: a `TenantDetailPage` owns a `threshold` value that a controlled `ThresholdSlider` mutates and a sibling `ThresholdReadout` reads. Routing is a hand-rolled hash router off `window.location.hash` (TanStack Router lands W4 D3). Strict TypeScript, ESLint 9, and a Vitest smoke test guard the build; CI runs them via a GitHub Action.
+
+```sh
+cd multistate-web
+npm install          # Node 20 (see .nvmrc)
+npm run dev          # Vite dev server on http://localhost:5173
+```
+
+Then open the tenant page directly at <http://localhost:5173/#/tenants/stub-id-1>. Other scripts: `npm run build`, `npm run lint`, `npm run typecheck`, `npm test`.
+
 ## Project layout
 
 Packages are domain-driven, rooted at `com.uptimecrew.multistate`:
