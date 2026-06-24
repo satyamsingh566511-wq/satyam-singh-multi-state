@@ -1,5 +1,5 @@
 // src/components/ErrorBoundary.tsx
-import { Component } from 'react';
+import { Component, Fragment } from 'react';
 import type { ErrorInfo, ReactNode } from 'react';
 
 type Props = {
@@ -7,12 +7,12 @@ type Props = {
   readonly fallback: (error: Error, reset: () => void) => ReactNode;
 };
 
-type State = { readonly error: Error | null };
+type State = { readonly error: Error | null; readonly resetKey: number };
 
 export class ErrorBoundary extends Component<Props, State> {
-  override state: State = { error: null };
+  override state: State = { error: null, resetKey: 0 };
 
-  static getDerivedStateFromError(error: Error): State {
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
   }
 
@@ -23,12 +23,17 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
-  private readonly reset = (): void => this.setState({ error: null });
+  // Clearing the error AND bumping the key. `key` is how React decides whether
+  // to keep or replace a component instance: a new key forces it to discard the
+  // old child subtree and mount a fresh one, so reset always lands on initial
+  // child state rather than reviving a stale instance.
+  private readonly reset = (): void =>
+    this.setState((s) => ({ error: null, resetKey: s.resetKey + 1 }));
 
   override render(): ReactNode {
     if (this.state.error) {
       return this.props.fallback(this.state.error, this.reset);
     }
-    return this.props.children;
+    return <Fragment key={this.state.resetKey}>{this.props.children}</Fragment>;
   }
 }
