@@ -5,6 +5,7 @@
 // link to the tenant page without a router dependency.
 import { useEffect, useState } from 'react';
 import type { ReactElement } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { TenantDetailPage } from './pages/TenantDetailPage';
 
 const TENANT_ROUTE = '#/tenants/stub-id-1';
@@ -19,7 +20,23 @@ export function App(): ReactElement {
   }, []);
 
   if (hash === TENANT_ROUTE) {
-    return <TenantDetailPage />;
+    return (
+      <ErrorBoundary
+        fallback={(err, reset) => (
+          <main className="page">
+            <div role="alert" className="error-card">
+              <h2>Something went wrong</h2>
+              <pre>{err.message}</pre>
+              <button type="button" className="btn btn--primary" onClick={reset}>
+                Try again
+              </button>
+            </div>
+          </main>
+        )}
+      >
+        <TenantDetailPage />
+      </ErrorBoundary>
+    );
   }
 
   return (
