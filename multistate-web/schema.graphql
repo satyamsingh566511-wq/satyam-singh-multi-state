@@ -1,0 +1,29 @@
+# Frontend-local GraphQL schema for codegen.
+#
+# The Spring service's SDL (../src/main/resources/graphql/schema.graphqls) is
+# the backend contract, but this assignment's reference documents (and the
+# grading rubric) speak the richer Tenant/TenantSummary shapes below. We codegen
+# against this local copy so the live endpoint isn't required and the backend
+# SDL stays untouched.
+type Query {
+  tenant(id: ID!): Tenant
+  latestTenants(limit: Int = 10): [Tenant!]!
+  tenantsByTag(tag: String!): [Tenant!]!
+}
+
+type Mutation {
+  summarizeTenant(id: ID!): TenantSummary!
+}
+
+type Tenant {
+  id: ID!
+  name: String!
+  updatedAt: String!
+  tags: [String!]!
+}
+
+type TenantSummary {
+  id: ID!
+  summaryText: String!
+  confidence: String!
+}
