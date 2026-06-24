@@ -1,0 +1,8 @@
+# src/queries/LatestTenants.graphql
+query LatestTenants {
+  latestTenants(limit: 20) {
+    id
+    name
+    updatedAt
+  }
+}
