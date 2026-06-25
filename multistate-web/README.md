@@ -58,11 +58,12 @@ hand-rolled hash router with a real router.
 
 ## Run it
 
-Requires Node 20 (see [.nvmrc](.nvmrc)).
+Requires Node 20 (see [.nvmrc](.nvmrc)) and [pnpm](https://pnpm.io)
+(version pinned via the `packageManager` field in `package.json`).
 
 ```sh
-npm install
-npm run dev      # Vite dev server on http://localhost:5173
+pnpm install
+pnpm dev         # Vite dev server on http://localhost:5173
 ```
 
 With `localStorage` empty you land on `/login`; "Sign in (stub)" writes a fake
@@ -73,10 +74,10 @@ uses the History API). Individual tenants live at `/tenants/<id>` and
 ## Other scripts
 
 ```sh
-npm run build      # type-check, then production build
-npm run preview    # serve the production build locally
-npm run lint       # ESLint 9
-npm run typecheck  # tsc --noEmit
-npm test           # Vitest (run mode)
-npm run codegen    # GraphQL Codegen → src/gql/generated/
+pnpm build      # type-check, then production build
+pnpm preview    # serve the production build locally
+pnpm lint       # ESLint 9
+pnpm typecheck  # tsc --noEmit
+pnpm test       # Vitest (run mode)
+pnpm codegen    # GraphQL Codegen → src/gql/generated/
 ```
