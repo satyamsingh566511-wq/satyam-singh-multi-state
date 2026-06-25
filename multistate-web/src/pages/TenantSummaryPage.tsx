@@ -1,6 +1,6 @@
 // src/pages/TenantSummaryPage.tsx
 import type { ReactElement } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useSummarizeTenantMutation } from '../gql/operations';
 import type { SummarizeTenantMutation } from '../gql/generated/graphql';
 
@@ -29,6 +29,8 @@ export function TenantSummaryPage(): ReactElement {
 
   return (
     <main className="page">
+      <Link to={`/tenants/${id}/chat`}>Open chat</Link>
+
       <button
         type="button"
         onClick={() => {

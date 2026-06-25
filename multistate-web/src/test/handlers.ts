@@ -1,7 +1,11 @@
 // src/test/handlers.ts
 import { graphql, http, HttpResponse, delay } from 'msw';
+import { sseHandlers } from './sse-handlers';
 
 export const handlers = [
+  // W4 D4 streaming chat (/api/chat). Spread first so the more specific SSE
+  // route is considered before any catch-alls below.
+  ...sseHandlers,
   graphql.query('LatestTenants', () =>
     HttpResponse.json({
       data: {
