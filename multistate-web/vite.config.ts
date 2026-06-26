@@ -19,6 +19,12 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // The TenantSummaryPage roster (useTenantsRest) hits the Spring REST
+      // surface same-origin; proxy it like /graphql so the backend needs no CORS.
+      '/api/v1': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

@@ -31,7 +31,21 @@ jobs:
           cache-dependency-path: multistate-web/pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run lint
-      - run: pnpm run typecheck
-      - run: pnpm run test
+
+      # Playwright needs a browser for the `check` script's E2E leg.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Single CI entrypoint: tsc --noEmit && eslint . && vitest --coverage && playwright test
+      - name: Check (typecheck + lint + tests + coverage + e2e)
+        run: pnpm run check
+
       - run: pnpm run build
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: multistate-web/playwright-report
+          retention-days: 7

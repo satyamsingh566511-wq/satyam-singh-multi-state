@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 .vite
+/coverage
+
+# Playwright
+/playwright-report
+/test-results
+/e2e/.auth
+/blob-report
+/playwright/.cache

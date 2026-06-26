@@ -1,6 +1,7 @@
 // src/pages/TenantListPage.tsx
-import type { ReactElement } from 'react';
+import type { ChangeEvent, ReactElement } from 'react';
 import { useLatestTenantsQuery } from '../gql/operations';
+import { useTenantFilterStore } from '../stores/useTenantFilterStore';
 
 /** First letters of up to two words, for the row avatar. */
 function initials(name: string): string {
@@ -26,6 +27,8 @@ function formatUpdated(iso: string): string {
 
 export function TenantListPage(): ReactElement {
   const { loading, error, data } = useLatestTenantsQuery();
+  const searchText = useTenantFilterStore((s) => s.searchText);
+  const setSearchText = useTenantFilterStore((s) => s.setSearchText);
 
   if (loading) {
     return (
@@ -47,7 +50,16 @@ export function TenantListPage(): ReactElement {
     );
   }
 
-  const rows = data?.latestTenants ?? [];
+  const all = data?.latestTenants ?? [];
+  const needle = searchText.trim().toLowerCase();
+  const rows =
+    needle === ''
+      ? all
+      : all.filter(
+          (t) =>
+            t.name.toLowerCase().includes(needle) ||
+            t.id.toLowerCase().includes(needle),
+        );
 
   return (
     <main className="page">
@@ -60,8 +72,27 @@ export function TenantListPage(): ReactElement {
           </p>
         </header>
 
+        <div className="field">
+          <label className="field__label" htmlFor="tenant-search">
+            Filter tenants
+          </label>
+          <input
+            id="tenant-search"
+            className="input"
+            type="search"
+            value={searchText}
+            aria-label="Filter tenants"
+            placeholder="name, id…"
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setSearchText(e.currentTarget.value)
+            }
+          />
+        </div>
+
         {rows.length === 0 ? (
-          <div className="card empty-card">No tenants yet.</div>
+          <p role="status" className="message empty-card">
+            No results
+          </p>
         ) : (
           <ul aria-label="tenant-list" className="tenant-list">
             {rows.map((tenant) => (
