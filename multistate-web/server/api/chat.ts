@@ -2,6 +2,7 @@
 import { Hono } from 'hono';
 import { APICallError, streamText, type Message } from 'ai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { z } from 'zod';
 import { tenantTools } from './chat-tools';
 
 // THREAT MODEL: this proxy holds the upstream API key. The browser
@@ -32,8 +33,38 @@ function toSentinelError(error: unknown): string {
   return error instanceof Error ? error.message : 'Unknown streaming error.';
 }
 
+// Runtime guard for the request body. c.req.json<T>() only narrows the
+// TypeScript type — at runtime the client can send anything. Validate the
+// minimum streamText needs (a non-empty array of role/content messages) so a
+// malformed body returns a clear 400 instead of a cryptic internal throw deep
+// inside streamText.
+const chatRequestSchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['system', 'user', 'assistant', 'data']),
+        content: z.string(),
+      }),
+    )
+    .min(1),
+});
+
 export const chat = new Hono().post('/chat', async (c) => {
-  const { messages } = await c.req.json<{ messages: Message[] }>();
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Request body must be valid JSON.' }, 400);
+  }
+
+  const parsed = chatRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      { error: 'Invalid chat request.', details: parsed.error.flatten() },
+      400,
+    );
+  }
+  const messages = parsed.data.messages as Message[];
 
   const result = streamText({
     model: upstream.chatModel('uptime-crew-assistant'),
