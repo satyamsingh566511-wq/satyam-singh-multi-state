@@ -95,3 +95,86 @@ reject) with the reasoning. Model for all W4 D4 entries: **Claude Opus 4.8**
   (jsdom AbortSignal vs the existing signal-stripping shim, per-frame delays for a
   deterministic Stop window) rather than trusting the reference handler verbatim,
   which closes the stream too fast to test Stop.
+
+---
+
+## Week 4 Day 5 — test pyramid, a11y budget, CI gate (2026-06-26)
+
+Model for all W4 D5 entries: **Claude Opus 4.8** (`claude-opus-4-8`), via Claude Code.
+
+### Entry 5 — Login page + tenant-list UI updates
+
+- **Prompt:** Add a `LoginPage` that drives a stub credential form and persists a
+  JWT to `localStorage` under `uc:jwt` so the protected layout unlocks; polish
+  `TenantListPage` (accessible filter searchbox + row links); add the
+  `docker-compose.dev.yml` + `application-local.yml` for a local backend.
+- **Model output:** Produced `LoginPage` with a labelled email/password form and
+  a `uc:jwt` write on submit, a `TenantListPage` whose filter is exposed as
+  `role="searchbox"` (name `/filter/i`) ahead of the row `link`s in tab order,
+  and the compose/profile config.
+- **Verdict:** **Accepted.** Kept the labelled-field + accessible-name shape it
+  proposed because every downstream RTL/e2e query (and the a11y tab-order test)
+  binds to those roles rather than to markup.
+
+### Entry 6 — RTL + Vitest harness (≥ 15 component tests)
+
+- **Prompt:** Build `renderWithProviders` that mounts Apollo `MockedProvider` +
+  TanStack `QueryClientProvider` + `MemoryRouter` and returns a single
+  `userEvent.setup()`; add component contract tests; wire `vitest --coverage`
+  and ESLint into the package; target ≥ 15 component tests.
+- **Model output:** Produced the one-stop render helper (retry-off, `gcTime: 0`
+  QueryClient so REST hooks never cache across tests; `route`/`apolloMocks`
+  options; returns `{ user, queryClient, ...utils }`), plus `TenantListPage`
+  contract tests and the Vitest/ESLint wiring.
+- **Verdict:** **Accepted, with one suggestion rejected.** It first set up
+  `userEvent` per-test inside each file; I had it return **one** `userEvent.setup()`
+  from the helper instead — two setups desync keyboard state under jsdom (§9
+  flake source). Queries go through `getByRole`/`getByLabelText`, not
+  `getByTestId`.
+
+### Entry 7 — MSW integration tests (≥ 12)
+
+- **Prompt:** Add `TenantSummaryPage.integration.test.tsx` driving the real page +
+  real QueryClient with MSW standing in for the Spring REST surface; cover happy
+  path, error (500 → alert), loading, and empty/filter-narrowing branches; add
+  the REST handlers; target ≥ 12 tests.
+- **Model output:** Produced the integration suite that exercises the query hook,
+  cache, and filter store for real (nothing stubbed past the network edge), using
+  `server.use(tenantErrorHandler / tenantLoadingHandler)` to opt into branches and
+  `resetHandlers` in `afterEach` to restore the happy path; added
+  `tenantRestHandlers` (three rows so a filter test can narrow many → one → none).
+- **Verdict:** **Accepted.** Chose per-case `server.use(...)` overrides over a
+  separate handler stack per test file, so one happy-path definition stays the
+  source of truth and branch tests state only their delta.
+
+### Entry 8 — Playwright e2e happy-path
+
+- **Prompt:** Add one capstone spec: signed-in engineer opens the tenant list →
+  drills into a tenant → chats with the streamed assistant → confirms the reply +
+  tool call survive a reload; mock every backend hop with `page.route`; add a
+  `global-setup` that logs in once and persists `storageState`.
+- **Model output:** Produced `tenant-chat.spec.ts` (Apollo + `/api/chat`
+  SSE mocked at the browser edge, web-first `expect(...).toContainText`/`toHaveURL`
+  assertions, an inline `AxeBuilder` scan asserting zero `wcag2a/2aa` violations),
+  the `playwright.config.ts`, and `global-setup.ts` that drives the real login
+  form once and writes `e2e/.auth/user.json` so no spec re-logs-in.
+- **Verdict:** **Accepted, with one suggestion rejected.** It offered a
+  `waitForTimeout(1000)` after the Send click "to be safe"; rejected per §9 —
+  fixed sleeps flake when the stream is slow and waste time when it's fast. The
+  spec waits on real conditions (streamed text in the `log`, URL change) via
+  auto-retrying assertions instead. Queries are role/name-based throughout.
+
+### Entry 9 — a11y budget + ESLint 9 + single CI `check` gate
+
+- **Prompt:** Add keyboard/focus-order a11y tests beyond static role assertions,
+  plus a `jest-axe` DOM audit; consolidate CI into one `pnpm run check`
+  (tsc --noEmit && eslint . && vitest --coverage && playwright test) and run it
+  from a `web-ci` workflow scoped to `multistate-web/**`.
+- **Model output:** Produced `tenant.a11y.test.tsx` driving the `Tab` key to prove
+  the filter-box-then-rows interactive order and a `jest-axe` `toHaveNoViolations`
+  check on the summary table; `LoginPage`/`TenantSummaryPage`/`ErrorBoundary`
+  contract tests; and the `web-ci.yml` that runs the single `check` script
+  (installing Playwright Chromium first) and uploads the Playwright report.
+- **Verdict:** **Accepted.** Kept the split it proposed — `axe` audits the static
+  DOM, the Tab-driven tests cover the order a keyboard-only user actually
+  experiences, which `axe` alone does not assert.
