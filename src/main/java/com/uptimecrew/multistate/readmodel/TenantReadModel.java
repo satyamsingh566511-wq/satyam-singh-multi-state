@@ -34,6 +34,15 @@ public class TenantReadModel implements Serializable {
     @Id
     private String id;
 
+    /*
+     * Human-readable display name for UI list views (multistate-web). Optional:
+     * the event-projection path (applyEvent) never sets it, so code-built read
+     * models leave it null; it is populated only when present on the persisted
+     * document. Field-mapped by Spring Data Mongo, so no constructor change is
+     * needed and existing callers/tests are unaffected.
+     */
+    private String name;
+
     @Indexed                                        /* secondary index — index-backed lookup by state */
     private String primaryState;
 
@@ -75,6 +84,7 @@ public class TenantReadModel implements Serializable {
     }
 
     public String getId()                          { return id; }
+    public String getName()                        { return name; }       /* GraphQL Tenant.name resolves here */
     public String getPrimaryState()                { return primaryState; }
     public Instant getCapturedAt()                 { return capturedAt; }
     public List<EmbeddedAllocation> getAllocations() { return allocations; }

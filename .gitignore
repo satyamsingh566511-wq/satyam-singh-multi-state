@@ -7,3 +7,5 @@ out/
 .DS_Store
 bin
 node_modules
+# local dev run logs (run-dev.sh)
+.dev-logs/

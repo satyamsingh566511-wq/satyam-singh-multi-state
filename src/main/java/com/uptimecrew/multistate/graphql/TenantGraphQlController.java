@@ -11,6 +11,7 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.BatchMapping;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -41,6 +42,16 @@ public class TenantGraphQlController {
     public List<TenantReadModel> tenantsByTag(@Argument String tag) {
         LOG.info("graphql query tenantsByTag tag={}", tag);
         return service.tenantsByTag(tag);
+    }
+
+    /*
+     * Resolves the schema's nullable Tenant.updatedAt from the read model's
+     * machine timestamp. capturedAt is an Instant (no getUpdatedAt() property),
+     * so this explicit mapping renders it as an ISO-8601 string for the UI.
+     */
+    @SchemaMapping(typeName = "Tenant", field = "updatedAt")
+    public String updatedAt(TenantReadModel tenant) {
+        return tenant.getCapturedAt() == null ? null : tenant.getCapturedAt().toString();
     }
 
     @MutationMapping

@@ -12,6 +12,13 @@ export default defineConfig({
         target: 'http://localhost:3001',
         changeOrigin: true,
       },
+      // GraphQL goes to the Spring backend. Proxying it through Vite keeps the
+      // browser request same-origin, so the backend needs no CORS config (it has
+      // none) — same pattern as /api/chat above.
+      '/graphql': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

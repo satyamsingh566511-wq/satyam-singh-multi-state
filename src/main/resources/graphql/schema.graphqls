@@ -10,6 +10,12 @@ type Mutation {
 
 type Tenant {
     id: ID!
+    # Nullable display fields consumed by the multistate-web UI list view. They
+    # are additive: existing queries (and the GraphQL ITs) that don't select them
+    # are unaffected, and a read model without a name/capturedAt resolves to null
+    # rather than violating a non-null contract.
+    name: String
+    updatedAt: String
     lines: [LineItem!]!
     tags: [String!]!
 }

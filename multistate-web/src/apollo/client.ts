@@ -11,7 +11,10 @@ import { setContext } from '@apollo/client/link/context';
 // that runs on the page. We accept that today because the W6 cookie
 // story (HttpOnly, SameSite=Strict, server-set) isn't built yet —
 // see §9 Sticking Points.
-const httpLink = new HttpLink({ uri: 'http://localhost:8080/graphql' });
+// Relative URI so the request is same-origin and rides the Vite dev proxy
+// (see vite.config.ts), which forwards /graphql to the Spring backend on :8080.
+// This avoids needing CORS on the backend.
+const httpLink = new HttpLink({ uri: '/graphql' });
 
 const authLink = setContext((_op, prevContext) => {
     const token = localStorage.getItem('uc:jwt');

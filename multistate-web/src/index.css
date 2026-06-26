@@ -39,12 +39,20 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Vertically centre the shell — used by the auth screen. */
+.page--center {
+  align-items: center;
+}
+
 .shell {
   width: 100%;
   max-width: 460px;
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+.shell--narrow {
+  max-width: 380px;
 }
 
 .card {
@@ -128,6 +136,153 @@ body {
 .btn--ghost:hover {
   background: #f3f4f6;
   color: var(--text);
+}
+.btn--block {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  padding: 11px 14px;
+}
+
+/* ---- Auth (login) card --------------------------------------------------- */
+
+.auth-card {
+  text-align: center;
+  padding: 30px 28px 26px;
+}
+.auth-card__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-size: 22px;
+  line-height: 1;
+}
+.auth-card .tenant__eyebrow {
+  margin-bottom: 6px;
+}
+.auth-card__title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.auth-card__sub {
+  margin: 0 0 22px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.auth-card__hint {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---- Tenant list --------------------------------------------------------- */
+
+.list-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.list-head__title {
+  margin: 2px 0 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.list-head__sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.tenant-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tenant-list__item {
+  margin: 0;
+}
+
+.tenant-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.tenant-row:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+.tenant-row__avatar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--primary-weak);
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.tenant-row__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.tenant-row__name {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tenant-row__meta {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tenant-row__chevron {
+  flex: none;
+  color: var(--muted);
+  font-size: 18px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.tenant-row:hover .tenant-row__chevron {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+.empty-card {
+  text-align: center;
+  color: var(--muted);
 }
 
 /* ---- FilterStrip --------------------------------------------------------- */

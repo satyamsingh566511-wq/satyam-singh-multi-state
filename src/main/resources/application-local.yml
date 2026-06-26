@@ -1,0 +1,13 @@
+# Local-profile override for running the app via `./gradlew bootRun` against the
+# docker-compose.dev.yml stack. Loaded only when the `local` profile is active
+# (it is the default — see application.yml `spring.profiles.default: local`), so
+# the `test` profile and its Testcontainers wiring are unaffected.
+#
+# Postgres/Mongo/Redis/Kafka use the default ports from application.yml. The only
+# thing that differs for local boot is Flyway: the canonical schema + seed (V1,
+# V2) live in the repo-root db/ folder, not on the classpath (only V3 is), so a
+# fresh Postgres would otherwise be missing the multistate tables the JPA
+# entities validate against. Point Flyway at the folder to apply V1/V2/V3.
+spring:
+  flyway:
+    locations: filesystem:db
