@@ -441,7 +441,9 @@ body {
   padding: 4px 12px;
   border-radius: 999px;
   background: var(--primary-weak);
-  color: var(--primary);
+  /* Darker than --primary so the pill clears WCAG AA (4.5:1) on --primary-weak;
+     the brand --primary only reached 4.01:1 here. */
+  color: #1e40af;
   font-size: 13px;
   font-weight: 600;
 }

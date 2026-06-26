@@ -18,3 +18,17 @@ export function useGetMultiStateRest(id: string) {
         },
     });
 }
+
+// The list variant used by the TenantSummaryPage roster table (W4 D5). Hits the
+// same Spring REST surface but the collection endpoint, so the summary page can
+// render every tenant as a row without a per-id round trip.
+export function useTenantsRest() {
+    return useQuery({
+        queryKey: ['multistate', 'tenants'],
+        queryFn: async () => {
+            const res = await fetch('/api/v1/tenants');
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return (await res.json()) as readonly TenantRest[];
+        },
+    });
+}
