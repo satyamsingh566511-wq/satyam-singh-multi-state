@@ -10,6 +10,12 @@ export function TenantChatPanel(): ReactElement {
   const { id = '' } = useParams<{ id: string }>();
   const persist = useTenantChatStore((s) => s.appendAssistantMessage);
 
+  // Seed useChat from the persisted transcript so a page reload re-paints the
+  // completed history. useChat snapshots initialMessages once on mount, so the
+  // ongoing in-memory stream stays the source of truth afterwards — onFinish
+  // keeps writing completed messages back to the store for the next reload.
+  const persistedMessages = useTenantChatStore((s) => s.messages);
+
   const {
     messages,
     input,
@@ -23,6 +29,7 @@ export function TenantChatPanel(): ReactElement {
     api: '/api/chat',
     // Stable, tenant-scoped id so each tenant keeps its own chat instance.
     id: `tenant-${id}`,
+    initialMessages: [...persistedMessages],
     onFinish: (message) => {
       // CRITICAL: only persist on completion. Writing partial tokens to
       // Zustand mid-stream breaks the persist middleware's rehydration, so a
@@ -39,9 +46,13 @@ export function TenantChatPanel(): ReactElement {
 
   return (
     <main className="page">
-      <ul aria-label="chat-transcript">
+      {/* role="log" marks the streamed transcript as an ARIA live region, so
+          assistive tech announces incoming tokens politely. Plain <div> rows
+          (not <li>) keep the live region free of orphaned listitem roles that
+          would trip axe's aria-required-parent rule. Queried via role "log". */}
+      <div role="log" aria-label="chat-transcript">
         {messages.map((m) => (
-          <li key={m.id} data-role={m.role}>
+          <div key={m.id} data-role={m.role}>
             <span>
               {m.role}: {m.content}
             </span>
@@ -51,9 +62,9 @@ export function TenantChatPanel(): ReactElement {
                 invocation={invocation}
               />
             ))}
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
       <div ref={endRef} />
 
       {isLoading && <p role="status">Assistant is replying...</p>}

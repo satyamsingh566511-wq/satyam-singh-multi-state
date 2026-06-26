@@ -1,54 +1,100 @@
 // src/pages/TenantSummaryPage.tsx
-import type { ReactElement } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useSummarizeTenantMutation } from '../gql/operations';
-import type { SummarizeTenantMutation } from '../gql/generated/graphql';
+//
+// The tenant roster summary. Driven entirely by the TanStack REST hook
+// (`/api/v1/tenants`) so the W4 D5 MSW integration suite can exercise the full
+// happy / error / empty / filter matrix against a real query cache. The search
+// box is wired to the shared Zustand filter store, so typing here narrows the
+// visible rows the same way the detail-page FilterStrip does.
+import type { ChangeEvent, ReactElement } from 'react';
+import { useTenantsRest } from '../hooks/useGetMultiStateRest';
+import { useTenantFilterStore } from '../stores/useTenantFilterStore';
 
 export function TenantSummaryPage(): ReactElement {
-  const { id = '' } = useParams<{ id: string }>();
+  const { data, isPending, isError, error } = useTenantsRest();
+  const searchText = useTenantFilterStore((s) => s.searchText);
+  const setSearchText = useTenantFilterStore((s) => s.setSearchText);
 
-  // The placeholder doubles as the optimisticResponse payload (so Apollo can
-  // normalise the optimistic write — note the __typename) AND as the card we
-  // paint while the mutation is in flight. In Apollo Client v4 a mutation's
-  // optimisticResponse is no longer surfaced through the hook's `data`, so we
-  // drive the placeholder off `loading` and let the real value swap in.
-  const placeholder: SummarizeTenantMutation['summarizeTenant'] = {
-    __typename: 'TenantSummary',
-    id,
-    summaryText: '…thinking…',
-    confidence: 'MEDIUM',
-  };
+  if (isPending) {
+    return (
+      <main className="page">
+        <p role="status" className="message">
+          Loading…
+        </p>
+      </main>
+    );
+  }
 
-  const [summarize, { loading, data, error }] = useSummarizeTenantMutation({
-    variables: { id },
-    optimisticResponse: { summarizeTenant: placeholder },
-  });
+  if (isError) {
+    return (
+      <main className="page">
+        <p role="alert" className="message">
+          Failed to load tenants: {error.message}
+        </p>
+      </main>
+    );
+  }
 
-  // Real result once it lands; otherwise the placeholder while in flight.
-  const summary = data?.summarizeTenant ?? (loading ? placeholder : undefined);
+  const needle = searchText.trim().toLowerCase();
+  const rows =
+    needle === ''
+      ? data
+      : data.filter(
+          (t) =>
+            t.name.toLowerCase().includes(needle) ||
+            t.id.toLowerCase().includes(needle),
+        );
 
   return (
     <main className="page">
-      <Link to={`/tenants/${id}/chat`}>Open chat</Link>
+      <div className="shell">
+        <header className="list-head">
+          <p className="tenant__eyebrow">Multi-State Tax Tracker</p>
+          <h1 className="list-head__title">Tenant summary</h1>
+        </header>
 
-      <button
-        type="button"
-        onClick={() => {
-          void summarize();
-        }}
-        disabled={loading}
-      >
-        Summarize
-      </button>
+        <div className="field">
+          <label className="field__label" htmlFor="summary-search">
+            Filter tenants
+          </label>
+          <input
+            id="summary-search"
+            className="input"
+            type="search"
+            value={searchText}
+            aria-label="Filter tenants"
+            placeholder="name, id…"
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setSearchText(e.currentTarget.value)
+            }
+          />
+        </div>
 
-      {error && <p role="alert">Error: {error.message}</p>}
-
-      {summary && (
-        <section aria-label="tenant-summary" className="summary-card">
-          <p>{summary.summaryText}</p>
-          <p>confidence: {summary.confidence}</p>
-        </section>
-      )}
+        {rows.length === 0 ? (
+          <p role="status" className="message empty-card">
+            No results
+          </p>
+        ) : (
+          <table className="summary-table">
+            <caption className="sr-only">Tenant summary</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">ID</th>
+                <th scope="col">Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((tenant) => (
+                <tr key={tenant.id}>
+                  <td>{tenant.name}</td>
+                  <td>{tenant.id}</td>
+                  <td>{tenant.updatedAt}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </main>
   );
 }

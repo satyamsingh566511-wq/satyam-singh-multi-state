@@ -20,7 +20,7 @@ function renderPanel(id = 'tnt-1') {
 }
 
 function transcriptText(): string {
-  return screen.getByRole('list', { name: 'chat-transcript' }).textContent ?? '';
+  return screen.getByRole('log', { name: 'chat-transcript' }).textContent ?? '';
 }
 
 describe('TenantChatPanel', () => {
@@ -46,7 +46,7 @@ describe('TenantChatPanel', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send' }));
 
     await waitFor(() => {
-      const assistant = container.querySelector('li[data-role="assistant"]');
+      const assistant = container.querySelector('[data-role="assistant"]');
       expect(assistant?.textContent).toMatch(/stub tenant reply\./i);
     });
   });

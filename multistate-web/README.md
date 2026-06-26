@@ -18,8 +18,12 @@ repo root; see the [root README](../README.md) for that side.
 - An **`ErrorBoundary`** wrapping the route with a render-prop fallback and a
   retry that re-mounts the subtree (exercised by a DEV-only "Trigger error"
   button that throws during render).
-- Strict TypeScript + ESLint 9 + Vitest unit tests, all run in CI by a GitHub
-  Action.
+- A full **test pyramid** — RTL + Vitest component/integration tests with MSW,
+  jest-axe accessibility assertions, and a Playwright Chromium E2E happy-path —
+  behind a single `pnpm check` gate (typecheck + lint + coverage + E2E) run in
+  CI by a GitHub Action.
+- Strict TypeScript + an **ESLint 9 flat config** (type-checked rules, React
+  Hooks, `jsx-a11y`, and explicit `no-explicit-any` / `as any` bans).
 
 ## Week 4 Day 3 — data layer, routing & API mocking
 
@@ -109,6 +113,62 @@ this exercise targets (`toDataStreamResponse`, `useChat`'s
   abort bridge (scoped to `/api/chat`) so `stop()` is testable under jsdom's
   AbortSignal. The suite climbs to **42 tests**.
 
+## Week 4 Day 5 — the test pyramid: RTL + MSW integration + Playwright E2E + a11y gate
+
+This day turned the app's ad-hoc unit tests into a graded, CI-enforced testing
+pyramid and added the `/login` page the E2E flow logs in through. The single
+entrypoint is `pnpm check` (`tsc --noEmit && eslint . && vitest run --coverage
+&& playwright test`), wired into the W4 D1 GitHub Action.
+
+- **Vitest harness** (`vitest.config.ts`, `src/test/setupTests.ts`,
+  `src/test/renderWithProviders.tsx`) — `environment: 'jsdom'`, a single
+  `setupFiles` module that loads `@testing-library/jest-dom`, extends `expect`
+  with `toHaveNoViolations`, and binds the MSW `beforeAll/afterEach/afterAll`
+  lifecycle. `renderWithProviders` mounts every provider a page needs
+  (`MockedProvider` + `QueryClientProvider` + `MemoryRouter`) and returns one
+  `userEvent.setup()` instance per render. A `coverage.thresholds.branches` of
+  **70** is the load-bearing gate.
+- **Component tests** (`src/pages/TenantListPage.test.tsx`,
+  `src/pages/TenantSummaryPage.test.tsx`) — role-first specs
+  (`getByRole` / `findByRole` as the primary query) covering the list, summary,
+  loading, empty, and error branches, each ending with an
+  `expect(await axe(container)).toHaveNoViolations()` assertion.
+- **MSW integration tests** (`src/pages/TenantSummaryPage.integration.test.tsx`,
+  14 tests) — drive the real query hook + cache + filter store against MSW,
+  covering the REST happy path, the REST 500 path, the loading skeleton, the
+  filter-store ↔ REST integration, the empty state, and a cache-hit / warm-mount
+  path, using `findBy*` for everything async. `src/test/handlers.ts` now exports
+  explicit **happy / error / loading** handlers for *both* the REST endpoint
+  (`tenantRestHandlers`, `tenantErrorHandler`, `tenantLoadingHandler`) and the
+  Apollo `LatestTenants` query (`latestTenantsErrorHandler`,
+  `latestTenantsLoadingHandler`), so a test can flip a single endpoint with
+  `server.use(...)`.
+- **Playwright E2E** (`playwright.config.ts`, `e2e/global-setup.ts`,
+  `e2e/tenant-chat.spec.ts`) — `testDir: './e2e'`, `fullyParallel`,
+  `retries: process.env.CI ? 2 : 0`, a `chromium` project, a `webServer` booting
+  `pnpm dev`, and `use.storageState` pointing at `e2e/.auth/user.json`. A global
+  setup logs in once through the UI and persists that storage state; the spec
+  then opens the tenant list, drills into a row by accessible name, drives the
+  W4 D4 chat panel, asserts the streamed tokens land in `getByRole('log')` and
+  the tool-call card is visible, reloads, and asserts the conversation persists.
+  Every backend hop is mocked at the browser edge with `page.route`.
+- **Accessibility** — jest-axe in the component tests plus
+  `@axe-core/playwright`'s `AxeBuilder().withTags(['wcag2a', 'wcag2aa'])` on the
+  detail page in the E2E run, both asserting zero violations. The streaming
+  transcript was promoted from `<ul aria-label="chat-transcript">` to a
+  `<div role="log" aria-label="chat-transcript">` live region (plain `<div>`
+  rows, so no orphaned `listitem` roles), which is both the correct semantics
+  for streamed output and what the E2E `getByRole('log')` assertion targets.
+- **ESLint 9 flat config** (`eslint.config.js`) — `js.configs.recommended`,
+  `tseslint.configs.recommendedTypeChecked`, `react-hooks/recommended`,
+  `jsx-a11y/recommended`, and explicit bans on `@typescript-eslint/no-explicit-any`
+  plus `as any` (matched syntactically via `no-restricted-syntax`), with a
+  test-file block relaxing the dynamic-matcher `no-unsafe-*` rules.
+- **`LoginPage`** (`src/pages/LoginPage.tsx`, `+ .test.tsx`) — the real sign-in
+  form the E2E `global-setup` authenticates through.
+- The suite now stands at **82 Vitest tests across 17 files** plus the Playwright
+  Chromium happy-path, with branch coverage at ~88%.
+
 ## Run it
 
 Requires Node 20 (see [.nvmrc](.nvmrc)) and [pnpm](https://pnpm.io)
@@ -135,6 +195,8 @@ pnpm build      # type-check, then production build
 pnpm preview    # serve the production build locally
 pnpm lint       # ESLint 9
 pnpm typecheck  # tsc --noEmit
-pnpm test       # Vitest (run mode)
+pnpm test       # Vitest (run mode) with coverage
+pnpm e2e        # Playwright (boots pnpm dev via its webServer)
+pnpm check      # the full CI gate: tsc --noEmit && eslint . && vitest --coverage && playwright test
 pnpm codegen    # GraphQL Codegen → src/gql/generated/
 ```
