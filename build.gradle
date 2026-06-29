@@ -21,6 +21,18 @@ java {
 // absent from api 1.55.0 (NoSuchMethodError on GlobalOpenTelemetry at startup).
 ext['opentelemetry.version'] = '1.62.0'
 
+// ── Security: forward-pin BOM-managed deps off CVE-flagged versions ────────
+// Trivy (W5 D1 Task 4) flagged HIGH/CRITICAL CVEs in the Spring Boot 4.0.6
+// BOM-managed baselines below. These are patch-level bumps within the same
+// minor, overridden via the Spring Boot dependency-management version
+// properties. Re-check on the monthly Spring Boot BOM refresh and drop any
+// override the BOM has caught up to.
+ext['tomcat.version']       = '11.0.22'      // CVE-2026-41293/-43512/-43515 (CRITICAL) + -41284/-42498/-43513
+ext['netty.version']        = '4.2.15.Final' // CVE-2026-42577..50010 across netty-codec-*/handler/resolver-dns
+ext['spring-kafka.version'] = '4.0.6'        // CVE-2026-41731
+ext['jackson-bom.version']   = '3.1.4'       // CVE-2026-54512/-54513 (Jackson 3 / tools.jackson)
+ext['jackson-2-bom.version'] = '2.21.4'      // CVE-2026-54512/-54513 (Jackson 2.x / com.fasterxml compat)
+
 
 repositories {
     mavenCentral()
@@ -36,7 +48,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-tomcat'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly    'org.springframework.boot:spring-boot-starter-jdbc'
-    runtimeOnly    'org.postgresql:postgresql:42.7.3'
+    runtimeOnly    'org.postgresql:postgresql:42.7.11'
 
     // ── NEW for W2 D4: Spring Data JPA ─────────────────────────────────
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -100,7 +112,7 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
-    testImplementation 'org.postgresql:postgresql:42.7.3'
+    testImplementation 'org.postgresql:postgresql:42.7.11'
 
     // ── NEW for W2 D5: Testcontainers MongoDB module ───────────────────
     testImplementation 'org.testcontainers:mongodb'
