@@ -125,6 +125,12 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      # Expose liveness/readiness groups outside Kubernetes too. Spring only
+      # auto-enables these probes when it detects a k8s environment; in a plain
+      # container we enable them explicitly so /actuator/health/{liveness,
+      # readiness} are available for the Docker HEALTHCHECK and orchestrators.
+      probes:
+        enabled: true
 
 logging:
   level:

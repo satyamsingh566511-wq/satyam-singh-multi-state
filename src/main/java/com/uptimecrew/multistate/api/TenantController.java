@@ -56,6 +56,7 @@ public class TenantController {
     public ResponseEntity<TenantReadModel> getById(@PathVariable String id,
                                                     @AuthenticationPrincipal Jwt jwt) {
         LOG.info("get id={} subject={}", id, jwt.getSubject());
+        LOG.debug("layer-cache discipline probe v5: getById invoked for id={}", id);
         Optional<TenantReadModel> found = service.findById(id);
         return found.map(ResponseEntity::ok)
                     .orElseGet(() -> ResponseEntity.notFound().build());
