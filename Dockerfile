@@ -35,14 +35,27 @@ RUN --mount=type=cache,target=/root/.gradle,sharing=locked \
 COPY src/ src/
 
 RUN --mount=type=cache,target=/root/.gradle,sharing=locked \
-    ./gradlew --no-daemon bootJar -x test
+    --mount=type=cache,target=/workspace/.gradle,sharing=locked \
+    --mount=type=cache,target=/workspace/build,sharing=locked \
+    ./gradlew --no-daemon --build-cache --configuration-cache bootJar -x test \
+ && mkdir -p /staging \
+ && cp build/libs/multistate-*.jar /staging/app.jar
+# Three cache mounts make a code-only rebuild fast:
+#   /root/.gradle      - resolved dependencies + the global build cache
+#   /workspace/.gradle - per-project execution history + configuration cache
+#                        (drives incremental compilation and up-to-date checks)
+#   /workspace/build   - compile outputs / incremental-compile snapshot
+# Together a one-file change recompiles just that file instead of the whole tree.
+# A cache mount is NOT part of the image layer, so the bootJar is copied out to
+# /staging (a real layer path) for the extractor stage to read.
 
 # -------- 2. EXTRACT STAGE --------
 # Run `layertools extract` on the bootJar. Tiny JRE only.
 FROM eclipse-temurin:21-jre-jammy AS extractor
 WORKDIR /extract
-# Project artifact is multistate-<version>.jar (rootProject.name = 'multistate').
-COPY --from=builder /workspace/build/libs/multistate-*.jar app.jar
+# Project artifact is multistate-<version>.jar (rootProject.name = 'multistate'),
+# copied out of the builder's build cache mount to /staging.
+COPY --from=builder /staging/app.jar app.jar
 RUN java -Djarmode=layertools -jar app.jar extract --destination .
 
 # -------- 3. RUNTIME STAGE --------
